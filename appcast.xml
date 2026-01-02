@@ -5,6 +5,29 @@
         <link>https://github.com/leolionart/Mac-Audio-Remote</link>
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
+    <item>
+        <title>Version 2.2.0</title>
+        <description><![CDATA[
+                <h2>Version 2.2.0</h2>
+                <ul>
+                    <li>✨ New: Beautiful custom popover menu with modern SwiftUI design</li>
+                    <li>🎨 New: Rounded buttons with SF Symbols icons and smooth animations</li>
+                    <li>📊 New: Volume progress bars with gradient effects</li>
+                    <li>🟢 New: Server status indicator (green/gray dot)</li>
+                    <li>🔧 Enhanced: Replaced standard NSMenu with custom NSPopover interface</li>
+                    <li>✨ Enhanced: Microphone toggle button with color-coded states (red=muted, green=active)</li>
+                    <li>🎯 Enhanced: Volume controls with increase/decrease/mute buttons</li>
+                    <li>📱 Enhanced: Modern macOS design matching system apps</li>
+                </ul>
+        ]]></description>
+        <pubDate>Fri, 02 Jan 2026 17:53:48 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.0/AudioRemote-2.2.0.zip"
+                   sparkle:version="2.2.0"
+                   sparkle:shortVersionString="2.2.0"
+                   length="14290840"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
         <item>
             <title>Version 2.1.2</title>
             <description><![CDATA[
