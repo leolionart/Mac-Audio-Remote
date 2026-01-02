@@ -185,7 +185,7 @@ struct FeatureCard: View {
             Spacer()
 
             Button(action: {
-                if let url = URL(string: "https://support.apple.com/guide/shortcuts/welcome/ios") {
+                if let url = URL(string: "https://github.com/leolionart/Mac-Audio-Remote/blob/main/iOS-SHORTCUTS-GUIDE.md") {
                     NSWorkspace.shared.open(url)
                 }
             }) {
