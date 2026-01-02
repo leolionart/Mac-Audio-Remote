@@ -19,9 +19,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.2.2</string>
+	<string>2.2.3</string>
 	<key>CFBundleVersion</key>
-	<string>8</string>
+	<string>9</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -29,6 +29,8 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Audio Remote controls system microphone and output volume for remote audio control.</string>
 	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
 	<true/>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml</string>
