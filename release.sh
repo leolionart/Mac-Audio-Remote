@@ -201,8 +201,23 @@ ${RELEASE_NOTES_HTML}
         <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
     </item>"
 
-# Insert new item after <language>en</language> line using Perl with UTF-8 support
-perl -i -C -pe "s/(<language>en<\/language>)/\$1\n$NEW_ITEM/" appcast.xml
+# Write new item to temporary file
+echo "$NEW_ITEM" > /tmp/new_appcast_item.xml
+
+# Insert new item after <language>en</language> line using awk
+awk '
+/<language>en<\/language>/ {
+    print
+    while ((getline line < "/tmp/new_appcast_item.xml") > 0) {
+        print line
+    }
+    close("/tmp/new_appcast_item.xml")
+    next
+}
+{print}
+' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
+
+rm -f /tmp/new_appcast_item.xml
 
 echo -e "${GREEN}✓ Updated appcast.xml${NC}"
 echo ""
