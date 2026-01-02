@@ -202,9 +202,15 @@ ${RELEASE_NOTES_HTML}
     </item>"
 
 # Insert new item after <language>en</language> line
-sed -i '' "/<language>en<\/language>/a\\
-$NEW_ITEM
-" appcast.xml
+# Create temp file with new item inserted
+awk -v item="$NEW_ITEM" '
+/<language>en<\/language>/ {
+    print
+    print item
+    next
+}
+{print}
+' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
 
 echo -e "${GREEN}✓ Updated appcast.xml${NC}"
 echo ""
