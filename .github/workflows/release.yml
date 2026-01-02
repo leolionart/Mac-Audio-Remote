@@ -72,11 +72,17 @@ jobs:
           fi
         fi
 
-        # Copy to .build/release for consistency with local build
+        # Copy to .build/release for consistency with local build (only if not already there)
         if [ -n "$SPARKLE_FOUND" ] && [ -d "$SPARKLE_FOUND" ]; then
           mkdir -p .build/release
-          cp -R "$SPARKLE_FOUND" .build/release/
-          echo "✓ Copied Sparkle.framework to .build/release/"
+
+          # Only copy if source and destination are different
+          if [ "$SPARKLE_FOUND" != ".build/release/Sparkle.framework" ]; then
+            cp -R "$SPARKLE_FOUND" .build/release/
+            echo "✓ Copied Sparkle.framework to .build/release/"
+          else
+            echo "✓ Sparkle.framework already in .build/release/"
+          fi
         else
           echo "❌ ERROR: Could not find or build Sparkle.framework"
           exit 1
