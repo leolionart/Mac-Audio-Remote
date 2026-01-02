@@ -1,0 +1,74 @@
+#!/bin/bash
+
+set -e
+
+echo "🔨 Building AudioRemote.app bundle..."
+
+# Configuration
+APP_NAME="AudioRemote"
+VERSION="2.1.0"
+BUILD_DIR=".build/release"
+APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+CONTENTS="$APP_BUNDLE/Contents"
+MACOS="$CONTENTS/MacOS"
+RESOURCES="$CONTENTS/Resources"
+FRAMEWORKS="$CONTENTS/Frameworks"
+
+# Clean up old bundle
+echo "🧹 Cleaning old bundle..."
+rm -rf "$APP_BUNDLE"
+
+# Build release binary
+echo "🔧 Building release binary..."
+swift build -c release
+
+# Create bundle structure
+echo "📦 Creating app bundle structure..."
+mkdir -p "$MACOS"
+mkdir -p "$RESOURCES"
+mkdir -p "$FRAMEWORKS"
+
+# Copy binary
+echo "📋 Copying binary..."
+cp "$BUILD_DIR/$APP_NAME" "$MACOS/"
+
+# Copy Info.plist
+echo "📋 Copying Info.plist..."
+cp "AudioRemote/Resources/Info.plist" "$CONTENTS/"
+
+# Copy icon if exists
+if [ -d "AudioRemote/Resources/Assets.xcassets" ]; then
+    echo "🎨 Copying icon assets..."
+    cp -R "AudioRemote/Resources/Assets.xcassets" "$RESOURCES/"
+fi
+
+# Copy Resources bundle if it exists
+if [ -d "$BUILD_DIR/AudioRemote_AudioRemote.bundle" ]; then
+    echo "📦 Copying resource bundle..."
+    cp -R "$BUILD_DIR/AudioRemote_AudioRemote.bundle" "$RESOURCES/"
+fi
+
+# Copy Sparkle framework
+echo "📦 Copying Sparkle.framework..."
+if [ -d "$BUILD_DIR/Sparkle.framework" ]; then
+    cp -R "$BUILD_DIR/Sparkle.framework" "$FRAMEWORKS/"
+    echo "   ✓ Copied Sparkle.framework"
+else
+    echo "   ⚠️  Warning: Sparkle.framework not found in $BUILD_DIR"
+fi
+
+# Set executable permission
+chmod +x "$MACOS/$APP_NAME"
+
+# Create PkgInfo
+echo "APPL????" > "$CONTENTS/PkgInfo"
+
+# Fix rpath for frameworks
+echo "🔧 Fixing framework rpaths..."
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/$APP_NAME" 2>/dev/null || true
+
+echo "✅ Build complete!"
+echo "📂 App bundle: $APP_BUNDLE"
+echo ""
+echo "🚀 To run: open $APP_BUNDLE"
+echo "📦 To create distributable: cd $BUILD_DIR && zip -r AudioRemote-$VERSION.zip AudioRemote.app"
