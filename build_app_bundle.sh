@@ -6,7 +6,7 @@ echo "🔨 Building AudioRemote.app bundle..."
 
 # Configuration
 APP_NAME="AudioRemote"
-VERSION="2.1.0"
+VERSION="2.1.1"
 BUILD_DIR=".build/release"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS="$APP_BUNDLE/Contents"

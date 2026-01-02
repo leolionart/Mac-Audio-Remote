@@ -6,6 +6,24 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
         <item>
+            <title>Version 2.1.1</title>
+            <description><![CDATA[
+                <h2>Version 2.1.1</h2>
+                <ul>
+                    <li>🔧 Fix: Resolved Sparkle framework loading issue in GitHub Actions builds</li>
+                    <li>🔧 Fix: App now launches correctly when downloaded from releases</li>
+                    <li>✅ Improved: More robust build process with framework detection</li>
+                </ul>
+            ]]></description>
+            <pubDate>Fri, 02 Jan 2026 11:30:00 GMT</pubDate>
+            <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.1/AudioRemote-2.1.1.zip"
+                       sparkle:version="2.1.1"
+                       sparkle:shortVersionString="2.1.1"
+                       length="0"
+                       type="application/octet-stream" />
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+        <item>
             <title>Version 2.1.0</title>
             <description><![CDATA[
                 <h2>Version 2.1.0</h2>
