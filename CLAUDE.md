@@ -35,118 +35,65 @@ open Package.swift
 
 ## Automated Build & Release Pipeline
 
-**IMPORTANT**: This project uses GitHub Actions for automated building and releasing. **DO NOT manually build releases** unless absolutely necessary for testing. Always use the automated workflows to ensure consistency and proper versioning.
+**IMPORTANT**: This project uses a fully automated local release script that handles version management, building, testing, and publishing to GitHub with Sparkle auto-update support.
 
-### GitHub Actions Workflows
+### Release Script: `release.sh`
 
-**CI Workflow** (`.github/workflows/ci.yml`)
-- **Triggers**: Push to `main` or `develop` branches, or pull requests
-- **Purpose**: Continuous integration testing
-- **Actions**:
-  1. Checkout code
-  2. Setup Xcode (latest stable)
-  3. Cache Swift packages
-  4. Build debug version
-  5. Build release version
-  6. Run tests (if any)
-  7. Verify app bundle can be created
-
-**Release Workflow** (`.github/workflows/release.yml`)
-- **Triggers**:
-  - Git tags matching `v*.*.*` pattern (e.g., `v2.0.0`, `v2.1.3`)
-  - Manual dispatch from GitHub Actions tab
-- **Purpose**: Build and publish releases
-- **Actions**:
-  1. Checkout code
-  2. Setup Xcode (latest stable)
-  3. Cache Swift packages
-  4. Build release binary with `swift build -c release`
-  5. Create app bundle structure:
-     - `AudioRemote.app/Contents/MacOS/` (binary)
-     - `AudioRemote.app/Contents/Resources/` (Info.plist, AppIcon.icns)
-  6. Create DMG using `create-dmg` (with fallback to `hdiutil`)
-  7. Create ZIP archive
-  8. Create GitHub Release with:
-     - DMG and ZIP attachments
-     - Auto-generated release notes
-     - Feature highlights
-  9. Upload artifacts for manual runs (30-day retention)
-
-### How to Release a New Version
-
-**FOLLOW THIS PROCESS - DO NOT DEVIATE**
-
-1. **Update Version Number**
-   ```bash
-   # Edit AudioRemote/Resources/Info.plist
-   # Update CFBundleShortVersionString (e.g., "2.1.0")
-   # Update CFBundleVersion (build number, e.g., "2")
-   ```
-
-2. **Update Changelog** (if exists)
-   ```bash
-   # Document new features, bug fixes, breaking changes
-   # Follow Keep a Changelog format
-   ```
-
-3. **Commit Version Changes**
-   ```bash
-   git add AudioRemote/Resources/Info.plist
-   git commit -m "chore: Bump version to 2.1.0"
-   git push origin main
-   ```
-
-4. **Create and Push Git Tag**
-   ```bash
-   # Tag format MUST be v{major}.{minor}.{patch}
-   git tag v2.1.0
-   git push origin v2.1.0
-   ```
-
-5. **GitHub Actions Automatically**:
-   - Detects the tag
-   - Triggers release workflow
-   - Builds DMG and ZIP
-   - Creates GitHub Release
-   - Uploads distribution files
-
-6. **Verify Release**:
-   - Check GitHub Actions workflow status
-   - Verify release appears on GitHub Releases page
-   - Test downloaded DMG/ZIP
-
-### Manual Release (Emergency Only)
-
-Only use if GitHub Actions is down or for local testing:
+The project includes a comprehensive automated release script that handles the entire release process:
 
 ```bash
-# Build release
-swift build -c release
-
-# Create app bundle (WITHOUT xcodebuild - it requires full Xcode)
-mkdir -p AudioRemote.app/Contents/MacOS
-mkdir -p AudioRemote.app/Contents/Resources
-
-# Copy files
-cp .build/release/AudioRemote AudioRemote.app/Contents/MacOS/
-cp AudioRemote/Resources/Info.plist AudioRemote.app/Contents/
-cp AudioRemote/Resources/AppIcon.icns AudioRemote.app/Contents/Resources/
-
-# Make executable
-chmod +x AudioRemote.app/Contents/MacOS/AudioRemote
-
-# Create ZIP
-zip -r AudioRemote.zip AudioRemote.app
-
-# Create DMG (requires create-dmg or hdiutil)
-hdiutil create -volname "Audio Remote" -srcfolder AudioRemote.app -ov -format UDZO AudioRemote.dmg
+./release.sh
 ```
 
-**⚠️ WARNING**: Manual builds:
-- Will NOT appear in GitHub Releases
-- Will NOT trigger Sparkle auto-update
-- May have inconsistent versioning
-- Should ONLY be used for local testing
+**What it does:**
+1. ✅ Pre-flight checks (gh CLI, git status, uncommitted changes)
+2. ✅ Version management (prompts for new version, validates semantic versioning)
+3. ✅ Auto-increments build number
+4. ✅ Collects release notes interactively
+5. ✅ Updates Info.plist with new version
+6. ✅ Builds app bundle with `build_app_bundle.sh`
+7. ✅ Tests app bundle (verifies all required files)
+8. ✅ Creates ZIP archive
+9. ✅ Updates appcast.xml with file size and release notes
+10. ✅ Git commit, tag, and push
+11. ✅ Creates GitHub Release with ZIP attachment
+12. ✅ Provides verification URLs
+
+**For AI Agents**: See `RELEASE_GUIDE.md` for detailed step-by-step instructions.
+
+### Quick Release
+
+```bash
+./release.sh
+```
+
+Follow the prompts:
+- Enter new version (e.g., `2.2.0`)
+- Enter release notes (one per line, empty line to finish)
+- Script handles everything else automatically
+
+### Build Script: `build_app_bundle.sh`
+
+Builds a complete app bundle with all resources:
+
+```bash
+./build_app_bundle.sh
+```
+
+**Creates:**
+- `.build/release/AudioRemote.app` - Complete app bundle
+- Binary in `Contents/MacOS/`
+- Info.plist, AppIcon.icns in `Contents/Resources/`
+- Sparkle.framework in `Contents/Frameworks/`
+
+### GitHub Actions Workflow
+
+**Release Workflow** (`.github/workflows/release.yml`)
+- **Trigger**: Git tags matching `v*.*.*` (created by `release.sh`)
+- **Purpose**: Automated CI build (backup to local release)
+- **Actions**: Build, create DMG/ZIP, create GitHub Release
+
+**Note**: The local `release.sh` script is the primary release method. GitHub Actions serves as a backup CI pipeline.
 
 ### Version Numbering Convention
 
@@ -160,15 +107,67 @@ Examples:
 - `v2.1.0`: Added output volume control (new feature)
 - `v2.1.1`: Fixed HTTP server crash (bug fix)
 
+Build numbers auto-increment with each release.
+
 ### Release Notes Guidelines
 
-GitHub Actions auto-generates release notes with:
-- Feature highlights (🎤 🔊 📱 🌐 ⚡️)
-- Installation instructions
-- Requirements
-- Link to full changelog
+Good release notes:
+- ✅ `✨ New: Feature description`
+- ✅ `🔧 Fix: Bug fix description`
+- ✅ `🎯 Enhanced: Improvement description`
 
-For custom release notes, edit the workflow file `.github/workflows/release.yml` before tagging.
+Bad release notes:
+- ❌ Technical jargon (refactored AudioManager.swift)
+- ❌ Internal details (updated dependencies)
+- ❌ Vague descriptions (various improvements)
+
+### Sparkle Auto-Update
+
+The release script automatically updates `appcast.xml` which powers Sparkle auto-updates:
+- Users with existing installations receive update notifications
+- Sparkle downloads ZIP from GitHub Release
+- Updates install automatically with user approval
+
+**Appcast URL**: `https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml`
+
+### Testing Releases
+
+After running `release.sh`:
+
+1. **Verify GitHub Release**:
+   ```bash
+   # URL provided by script
+   open https://github.com/leolionart/Mac-Audio-Remote/releases/tag/vX.X.X
+   ```
+
+2. **Test Download and Install**:
+   - Download ZIP from GitHub Release
+   - Extract and move to Applications
+   - Launch and verify functionality
+
+3. **Test Sparkle Auto-Update**:
+   - Launch previous version
+   - Wait for update notification (or check manually)
+   - Verify update downloads and installs correctly
+
+### Emergency Rollback
+
+If a release has critical issues:
+
+```bash
+# Delete GitHub release
+gh release delete vX.X.X --yes
+
+# Remove git tag
+git tag -d vX.X.X
+git push origin :refs/tags/vX.X.X
+
+# Revert appcast.xml
+git revert HEAD
+git push origin main
+```
+
+This prevents new downloads and stops auto-updates.
 
 ### Testing HTTP Server
 ```bash
