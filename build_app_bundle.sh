@@ -46,6 +46,12 @@ fi
 if [ -d "$BUILD_DIR/AudioRemote_AudioRemote.bundle" ]; then
     echo "📦 Copying resource bundle..."
     cp -R "$BUILD_DIR/AudioRemote_AudioRemote.bundle" "$RESOURCES/"
+
+    # Copy AppIcon.icns to Resources root for Finder icon
+    if [ -f "$BUILD_DIR/AudioRemote_AudioRemote.bundle/Resources/AppIcon.icns" ]; then
+        echo "🎨 Copying AppIcon.icns to Resources..."
+        cp "$BUILD_DIR/AudioRemote_AudioRemote.bundle/Resources/AppIcon.icns" "$RESOURCES/"
+    fi
 fi
 
 # Copy Sparkle framework
