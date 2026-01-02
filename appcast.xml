@@ -6,6 +6,27 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.2</title>
+        <description><![CDATA[
+                <h2>Version 2.2.2</h2>
+                <ul>
+                    <li>🔧 Fix: Volume control webhooks no longer hang/freeze the app</li>
+                    <li>🔧 Fix: Microphone toggle webhook now responds correctly</li>
+                    <li>⚡ Enhanced: All HTTP endpoints now use synchronous handlers for better stability</li>
+                    <li>🎯 Enhanced: @Published properties now safely update on main thread from any context</li>
+                    <li>✅ Verified: All webhooks tested and working (increase, decrease, set, toggle-mute, status)</li>
+                </ul>
+        ]]></description>
+        <pubDate>Fri, 02 Jan 2026 19:14:54 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.2/AudioRemote-2.2.2.zip"
+                   sparkle:version="2.2.2"
+                   sparkle:shortVersionString="2.2.2"
+                   sparkle:edSignature="cTz140fT03Z3QpShHrS9uPdq1vMDSgZ+bU0jzXYxRlH6p/dEEq1FoQgiXiHAG5UXAE5mlpvqhFWnn8q47S0rDA=="
+                   length="14283415"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.1</title>
         <description><![CDATA[
                 <h2>Version 2.2.1</h2>
