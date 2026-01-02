@@ -27,11 +27,6 @@ class NotificationService {
     }
 
     func show(title: String, body: String, subtitle: String? = nil) {
-        guard isAuthorized else {
-            print("Cannot show notification: not authorized")
-            return
-        }
-
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -49,6 +44,8 @@ class NotificationService {
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Error showing notification: \(error.localizedDescription)")
+            } else {
+                print("✅ Notification sent: \(title)")
             }
         }
     }

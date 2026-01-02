@@ -127,6 +127,14 @@ class HTTPServer {
             // Get volume directly from Core Audio, not from @Published property
             let currentVolume = self.audioManager.getOutputVolume()
 
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(
+                    volume: currentVolume,
+                    isMuted: (currentVolume == 0.0)
+                )
+            }
+
             return VolumeResponse(
                 status: "ok",
                 volume: currentVolume,
@@ -141,13 +149,19 @@ class HTTPServer {
             }
 
             let step = self.settingsManager.settings.volumeStep
-
-            // Core Audio can be called from any thread - don't force main thread
             self.audioManager.decreaseOutputVolume(step)
             self.settingsManager.incrementRequestCount()
 
             // Get volume directly from Core Audio, not from @Published property
             let currentVolume = self.audioManager.getOutputVolume()
+
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(
+                    volume: currentVolume,
+                    isMuted: (currentVolume == 0.0)
+                )
+            }
 
             return VolumeResponse(
                 status: "ok",
@@ -167,13 +181,19 @@ class HTTPServer {
             }
 
             let request = try req.content.decode(SetVolumeRequest.self)
-
-            // Core Audio can be called from any thread - don't force main thread
             self.audioManager.setOutputVolume(request.volume)
             self.settingsManager.incrementRequestCount()
 
             // Get volume directly from Core Audio, not from @Published property
             let currentVolume = self.audioManager.getOutputVolume()
+
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(
+                    volume: currentVolume,
+                    isMuted: (currentVolume == 0.0)
+                )
+            }
 
             return VolumeResponse(
                 status: "ok",
@@ -188,12 +208,19 @@ class HTTPServer {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
 
-            // Core Audio can be called from any thread - don't force main thread
             _ = self.audioManager.toggleOutputMute()
             self.settingsManager.incrementRequestCount()
 
             // Get volume directly from Core Audio, not from @Published property
             let currentVolume = self.audioManager.getOutputVolume()
+
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(
+                    volume: currentVolume,
+                    isMuted: (currentVolume == 0.0)
+                )
+            }
 
             return VolumeResponse(
                 status: "ok",

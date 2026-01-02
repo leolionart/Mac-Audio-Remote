@@ -484,6 +484,11 @@ struct SettingsSection: View {
                         set: { newValue in
                             settingsManager.settings.notificationsEnabled = newValue
                             settingsManager.save()
+
+                            // Test notification when enabled
+                            if newValue {
+                                NotificationService.shared.showInfo(message: "Notifications enabled! You'll see alerts when mic state changes.")
+                            }
                         }
                     )
                 )
