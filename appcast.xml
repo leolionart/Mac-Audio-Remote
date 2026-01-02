@@ -19,7 +19,7 @@
             <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.1/AudioRemote-2.1.1.zip"
                        sparkle:version="2.1.1"
                        sparkle:shortVersionString="2.1.1"
-                       length="0"
+                       length="13651755"
                        type="application/octet-stream" />
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
         </item>
