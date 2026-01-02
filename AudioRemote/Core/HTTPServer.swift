@@ -83,7 +83,7 @@ class HTTPServer {
         )))
 
         // POST /toggle-mic
-        app.post("toggle-mic") { [weak self] req async throws -> ToggleResponse in
+        app.post("toggle-mic") { [weak self] req throws -> ToggleResponse in
             guard let self = self else {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
@@ -115,7 +115,7 @@ class HTTPServer {
         // MARK: - Volume Control Endpoints
 
         // POST /volume/increase
-        app.post("volume", "increase") { [weak self] req async throws -> VolumeResponse in
+        app.post("volume", "increase") { [weak self] req throws -> VolumeResponse in
             guard let self = self else {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
@@ -124,64 +124,40 @@ class HTTPServer {
             self.audioManager.increaseOutputVolume(step)
             self.settingsManager.incrementRequestCount()
 
-            // Show notification if enabled
-            if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showVolumeChange(
-                    volume: self.audioManager.outputVolume,
-                    source: "Remote"
-                )
-            }
-
-            // Show HUD overlay
-            await MainActor.run {
-                VolumeHUDController.shared.show(
-                    volume: self.audioManager.outputVolume,
-                    isMuted: self.audioManager.isOutputMuted
-                )
-            }
+            // Get volume directly from Core Audio, not from @Published property
+            let currentVolume = self.audioManager.getOutputVolume()
 
             return VolumeResponse(
                 status: "ok",
-                volume: self.audioManager.outputVolume,
-                muted: self.audioManager.isOutputMuted
+                volume: currentVolume,
+                muted: (currentVolume == 0.0)
             )
         }
 
         // POST /volume/decrease
-        app.post("volume", "decrease") { [weak self] req async throws -> VolumeResponse in
+        app.post("volume", "decrease") { [weak self] req throws -> VolumeResponse in
             guard let self = self else {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
 
             let step = self.settingsManager.settings.volumeStep
+
+            // Core Audio can be called from any thread - don't force main thread
             self.audioManager.decreaseOutputVolume(step)
             self.settingsManager.incrementRequestCount()
 
-            // Show notification if enabled
-            if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showVolumeChange(
-                    volume: self.audioManager.outputVolume,
-                    source: "Remote"
-                )
-            }
-
-            // Show HUD overlay
-            await MainActor.run {
-                VolumeHUDController.shared.show(
-                    volume: self.audioManager.outputVolume,
-                    isMuted: self.audioManager.isOutputMuted
-                )
-            }
+            // Get volume directly from Core Audio, not from @Published property
+            let currentVolume = self.audioManager.getOutputVolume()
 
             return VolumeResponse(
                 status: "ok",
-                volume: self.audioManager.outputVolume,
-                muted: self.audioManager.isOutputMuted
+                volume: currentVolume,
+                muted: (currentVolume == 0.0)
             )
         }
 
         // POST /volume/set
-        app.post("volume", "set") { [weak self] req async throws -> VolumeResponse in
+        app.post("volume", "set") { [weak self] req throws -> VolumeResponse in
             guard let self = self else {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
@@ -191,61 +167,38 @@ class HTTPServer {
             }
 
             let request = try req.content.decode(SetVolumeRequest.self)
+
+            // Core Audio can be called from any thread - don't force main thread
             self.audioManager.setOutputVolume(request.volume)
             self.settingsManager.incrementRequestCount()
 
-            // Show notification if enabled
-            if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showVolumeChange(
-                    volume: self.audioManager.outputVolume,
-                    source: "Remote"
-                )
-            }
-
-            // Show HUD overlay
-            await MainActor.run {
-                VolumeHUDController.shared.show(
-                    volume: self.audioManager.outputVolume,
-                    isMuted: self.audioManager.isOutputMuted
-                )
-            }
+            // Get volume directly from Core Audio, not from @Published property
+            let currentVolume = self.audioManager.getOutputVolume()
 
             return VolumeResponse(
                 status: "ok",
-                volume: self.audioManager.outputVolume,
-                muted: self.audioManager.isOutputMuted
+                volume: currentVolume,
+                muted: (currentVolume == 0.0)
             )
         }
 
         // POST /volume/toggle-mute
-        app.post("volume", "toggle-mute") { [weak self] req async throws -> VolumeResponse in
+        app.post("volume", "toggle-mute") { [weak self] req throws -> VolumeResponse in
             guard let self = self else {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
 
-            let muted = self.audioManager.toggleOutputMute()
+            // Core Audio can be called from any thread - don't force main thread
+            _ = self.audioManager.toggleOutputMute()
             self.settingsManager.incrementRequestCount()
 
-            // Show notification if enabled
-            if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showVolumeMute(
-                    isMuted: muted,
-                    source: "Remote"
-                )
-            }
-
-            // Show HUD overlay
-            await MainActor.run {
-                VolumeHUDController.shared.show(
-                    volume: self.audioManager.outputVolume,
-                    isMuted: self.audioManager.isOutputMuted
-                )
-            }
+            // Get volume directly from Core Audio, not from @Published property
+            let currentVolume = self.audioManager.getOutputVolume()
 
             return VolumeResponse(
                 status: "ok",
-                volume: self.audioManager.outputVolume,
-                muted: self.audioManager.isOutputMuted
+                volume: currentVolume,
+                muted: (currentVolume == 0.0)
             )
         }
 

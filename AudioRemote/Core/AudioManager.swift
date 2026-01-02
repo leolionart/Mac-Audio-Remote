@@ -239,14 +239,20 @@ class AudioManager: ObservableObject {
 
     private func updateOutputState() {
         let volume = getOutputVolume()
-        outputVolume = volume
-        isOutputMuted = (volume == 0.0)
+        // @Published properties must be updated on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.outputVolume = volume
+            self?.isOutputMuted = (volume == 0.0)
+        }
     }
 
     private func updateCurrentState() {
         let volume = getVolume()
-        currentVolume = volume
-        isMuted = (volume == 0.0)
+        // @Published properties must be updated on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.currentVolume = volume
+            self?.isMuted = (volume == 0.0)
+        }
     }
 
     private func observeVolumeChanges() {
