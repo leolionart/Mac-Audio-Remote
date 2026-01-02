@@ -33,18 +33,142 @@ open Package.swift
 # Then press ⌘R to build and run
 ```
 
-### Create Distributable .app Bundle
-```bash
-# Archive the app
-xcodebuild -scheme AudioRemote -configuration Release \
-  -archivePath AudioRemote.xcarchive archive
+## Automated Build & Release Pipeline
 
-# Export as .app
-xcodebuild -exportArchive \
-  -archivePath AudioRemote.xcarchive \
-  -exportPath dist/ \
-  -exportOptionsPlist ExportOptions.plist
+**IMPORTANT**: This project uses GitHub Actions for automated building and releasing. **DO NOT manually build releases** unless absolutely necessary for testing. Always use the automated workflows to ensure consistency and proper versioning.
+
+### GitHub Actions Workflows
+
+**CI Workflow** (`.github/workflows/ci.yml`)
+- **Triggers**: Push to `main` or `develop` branches, or pull requests
+- **Purpose**: Continuous integration testing
+- **Actions**:
+  1. Checkout code
+  2. Setup Xcode (latest stable)
+  3. Cache Swift packages
+  4. Build debug version
+  5. Build release version
+  6. Run tests (if any)
+  7. Verify app bundle can be created
+
+**Release Workflow** (`.github/workflows/release.yml`)
+- **Triggers**:
+  - Git tags matching `v*.*.*` pattern (e.g., `v2.0.0`, `v2.1.3`)
+  - Manual dispatch from GitHub Actions tab
+- **Purpose**: Build and publish releases
+- **Actions**:
+  1. Checkout code
+  2. Setup Xcode (latest stable)
+  3. Cache Swift packages
+  4. Build release binary with `swift build -c release`
+  5. Create app bundle structure:
+     - `AudioRemote.app/Contents/MacOS/` (binary)
+     - `AudioRemote.app/Contents/Resources/` (Info.plist, AppIcon.icns)
+  6. Create DMG using `create-dmg` (with fallback to `hdiutil`)
+  7. Create ZIP archive
+  8. Create GitHub Release with:
+     - DMG and ZIP attachments
+     - Auto-generated release notes
+     - Feature highlights
+  9. Upload artifacts for manual runs (30-day retention)
+
+### How to Release a New Version
+
+**FOLLOW THIS PROCESS - DO NOT DEVIATE**
+
+1. **Update Version Number**
+   ```bash
+   # Edit AudioRemote/Resources/Info.plist
+   # Update CFBundleShortVersionString (e.g., "2.1.0")
+   # Update CFBundleVersion (build number, e.g., "2")
+   ```
+
+2. **Update Changelog** (if exists)
+   ```bash
+   # Document new features, bug fixes, breaking changes
+   # Follow Keep a Changelog format
+   ```
+
+3. **Commit Version Changes**
+   ```bash
+   git add AudioRemote/Resources/Info.plist
+   git commit -m "chore: Bump version to 2.1.0"
+   git push origin main
+   ```
+
+4. **Create and Push Git Tag**
+   ```bash
+   # Tag format MUST be v{major}.{minor}.{patch}
+   git tag v2.1.0
+   git push origin v2.1.0
+   ```
+
+5. **GitHub Actions Automatically**:
+   - Detects the tag
+   - Triggers release workflow
+   - Builds DMG and ZIP
+   - Creates GitHub Release
+   - Uploads distribution files
+
+6. **Verify Release**:
+   - Check GitHub Actions workflow status
+   - Verify release appears on GitHub Releases page
+   - Test downloaded DMG/ZIP
+
+### Manual Release (Emergency Only)
+
+Only use if GitHub Actions is down or for local testing:
+
+```bash
+# Build release
+swift build -c release
+
+# Create app bundle (WITHOUT xcodebuild - it requires full Xcode)
+mkdir -p AudioRemote.app/Contents/MacOS
+mkdir -p AudioRemote.app/Contents/Resources
+
+# Copy files
+cp .build/release/AudioRemote AudioRemote.app/Contents/MacOS/
+cp AudioRemote/Resources/Info.plist AudioRemote.app/Contents/
+cp AudioRemote/Resources/AppIcon.icns AudioRemote.app/Contents/Resources/
+
+# Make executable
+chmod +x AudioRemote.app/Contents/MacOS/AudioRemote
+
+# Create ZIP
+zip -r AudioRemote.zip AudioRemote.app
+
+# Create DMG (requires create-dmg or hdiutil)
+hdiutil create -volname "Audio Remote" -srcfolder AudioRemote.app -ov -format UDZO AudioRemote.dmg
 ```
+
+**⚠️ WARNING**: Manual builds:
+- Will NOT appear in GitHub Releases
+- Will NOT trigger Sparkle auto-update
+- May have inconsistent versioning
+- Should ONLY be used for local testing
+
+### Version Numbering Convention
+
+Follow Semantic Versioning (SemVer):
+- **Major (X.0.0)**: Breaking changes, major rewrites
+- **Minor (x.X.0)**: New features, backwards compatible
+- **Patch (x.x.X)**: Bug fixes, minor improvements
+
+Examples:
+- `v2.0.0`: Swift rewrite (breaking change from Python version)
+- `v2.1.0`: Added output volume control (new feature)
+- `v2.1.1`: Fixed HTTP server crash (bug fix)
+
+### Release Notes Guidelines
+
+GitHub Actions auto-generates release notes with:
+- Feature highlights (🎤 🔊 📱 🌐 ⚡️)
+- Installation instructions
+- Requirements
+- Link to full changelog
+
+For custom release notes, edit the workflow file `.github/workflows/release.yml` before tagging.
 
 ### Testing HTTP Server
 ```bash
