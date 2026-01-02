@@ -6,6 +6,28 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.4</title>
+        <description><![CDATA[
+                <h2>Version 2.2.4</h2>
+                <ul>
+                    <li>✨ New: Volume HUD overlay displays when controlling volume via webhooks</li>
+                    <li>✨ New: Test notification when enabling notifications in Settings</li>
+                    <li>🔧 Fix: Notifications now work properly (removed authorization guard)</li>
+                    <li>🎨 Enhanced: Beautiful macOS-style HUD with volume bar and fade animations</li>
+                    <li>🔔 Enhanced: Notification shows immediately when toggled on</li>
+                    <li>⚡ Enhanced: HUD dispatched to main thread safely (non-blocking)</li>
+                </ul>
+        ]]></description>
+        <pubDate>Fri, 02 Jan 2026 23:36:10 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.4/AudioRemote-2.2.4.zip"
+                   sparkle:version="2.2.4"
+                   sparkle:shortVersionString="2.2.4"
+                   sparkle:edSignature="uneSqpkfQ+dCoS5sHcZ+ZPzkWz0RK2FCwz6mNoHrNpP9MBWodUvzhE3H6uo6vsxS1bUwnN3bWxBq4BE5wRlVAQ=="
+                   length="14290482"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.3</title>
         <description><![CDATA[
                 <h2>Version 2.2.3</h2>
