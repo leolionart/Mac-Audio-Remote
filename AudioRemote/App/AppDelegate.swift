@@ -1,0 +1,96 @@
+import Cocoa
+import Combine
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var audioManager: AudioManager!
+    var settingsManager: SettingsManager!
+    var menuBarController: MenuBarController!
+    var httpServer: HTTPServer!
+    var globalHotkeyManager: GlobalHotkeyManager!
+    var updateManager: UpdateManager!
+    var cancellables = Set<AnyCancellable>()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Hide dock icon (app is menu bar only)
+        NSApp.setActivationPolicy(.accessory)
+
+        // Initialize managers
+        audioManager = AudioManager()
+        settingsManager = SettingsManager()
+
+        // Request notification permission
+        NotificationService.shared.requestAuthorization()
+
+        // Initialize update manager
+        updateManager = UpdateManager()
+
+        // Setup menu bar
+        menuBarController = MenuBarController(
+            audioManager: audioManager,
+            settingsManager: settingsManager,
+            updateManager: updateManager
+        )
+
+        // Initialize HTTP server
+        httpServer = HTTPServer(
+            audioManager: audioManager,
+            settingsManager: settingsManager
+        )
+
+        // Setup global hotkey (Option+M)
+        globalHotkeyManager = GlobalHotkeyManager(
+            audioManager: audioManager,
+            settingsManager: settingsManager
+        )
+
+        // Start HTTP server if enabled
+        if settingsManager.settings.httpServerEnabled {
+            startHTTPServer()
+        }
+
+        // Observe settings changes to restart/stop server
+        settingsManager.$settings
+            .sink { [weak self] settings in
+                guard let self = self else { return }
+
+                if settings.httpServerEnabled {
+                    self.startHTTPServer()
+                } else {
+                    self.httpServer.stop()
+                }
+            }
+            .store(in: &cancellables)
+
+        print("Audio Remote started successfully")
+        print("Mic status: \(audioManager.isMuted ? "Muted" : "Active")")
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        httpServer?.stop()
+        print("Audio Remote terminated")
+    }
+
+    // MARK: - Private Methods
+
+    private func startHTTPServer() {
+        do {
+            try httpServer.start(port: settingsManager.settings.httpPort)
+        } catch {
+            print("Failed to start HTTP server: \(error)")
+
+            // Show error alert
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "HTTP Server Error"
+                alert.informativeText = "Failed to start HTTP server on port \(self.settingsManager.settings.httpPort).\n\nError: \(error.localizedDescription)\n\nPlease check if another application is using this port."
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+
+                // Disable HTTP server in settings
+                self.settingsManager.settings.httpServerEnabled = false
+                self.settingsManager.save()
+            }
+        }
+    }
+}
