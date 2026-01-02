@@ -201,8 +201,8 @@ ${RELEASE_NOTES_HTML}
         <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
     </item>"
 
-# Insert new item after <language>en</language> line using Perl
-perl -i -pe "s/(<language>en<\/language>)/\$1\n$NEW_ITEM/" appcast.xml
+# Insert new item after <language>en</language> line using Perl with UTF-8 support
+perl -i -C -pe "s/(<language>en<\/language>)/\$1\n$NEW_ITEM/" appcast.xml
 
 echo -e "${GREEN}✓ Updated appcast.xml${NC}"
 echo ""
