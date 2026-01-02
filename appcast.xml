@@ -6,6 +6,25 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
         <item>
+            <title>Version 2.1.2</title>
+            <description><![CDATA[
+                <h2>Version 2.1.2</h2>
+                <ul>
+                    <li>🔧 Fix: AppIcon.icns now properly copied to Resources root for Finder display</li>
+                    <li>✨ New: Complete automated release workflow with interactive prompts</li>
+                    <li>📝 Enhanced: Comprehensive release documentation for AI agents</li>
+                    <li>🎯 Enhanced: Build script automatically handles icon placement</li>
+                </ul>
+            ]]></description>
+            <pubDate>Fri, 03 Jan 2026 00:10:00 GMT</pubDate>
+            <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.2/AudioRemote-2.1.2.zip"
+                       sparkle:version="2.1.2"
+                       sparkle:shortVersionString="2.1.2"
+                       length="14253432"
+                       type="application/octet-stream" />
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+        <item>
             <title>Version 2.1.1</title>
             <description><![CDATA[
                 <h2>Version 2.1.1</h2>
