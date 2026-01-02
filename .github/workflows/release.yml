@@ -34,46 +34,103 @@ jobs:
       run: |
         swift build -c release
 
+    - name: Find and copy Sparkle framework
+      run: |
+        # SPM checkouts Sparkle to .build/checkouts/, need to find the built framework
+        echo "🔍 Searching for Sparkle.framework..."
+
+        # Try common locations
+        SPARKLE_PATHS=(
+          ".build/release/Sparkle.framework"
+          ".build/arm64-apple-macosx/release/Sparkle.framework"
+          ".build/x86_64-apple-macosx/release/Sparkle.framework"
+          ".build/checkouts/Sparkle/Sparkle.framework"
+          ".build/artifacts/sparkle/Sparkle/Sparkle.framework"
+        )
+
+        SPARKLE_FOUND=""
+        for path in "${SPARKLE_PATHS[@]}"; do
+          if [ -d "$path" ]; then
+            SPARKLE_FOUND="$path"
+            echo "✓ Found Sparkle.framework at: $path"
+            break
+          fi
+        done
+
+        if [ -z "$SPARKLE_FOUND" ]; then
+          echo "⚠️ Sparkle.framework not found in standard locations"
+          echo "📂 Searching entire .build directory..."
+          find .build -name "Sparkle.framework" -type d 2>/dev/null || true
+
+          # Try to build Sparkle manually from checkouts
+          if [ -d ".build/checkouts/Sparkle" ]; then
+            echo "🔨 Building Sparkle from source..."
+            cd .build/checkouts/Sparkle
+            xcodebuild -scheme Sparkle -configuration Release -derivedDataPath ./DerivedData
+            cd ../../..
+            SPARKLE_FOUND=".build/checkouts/Sparkle/DerivedData/Build/Products/Release/Sparkle.framework"
+          fi
+        fi
+
+        # Copy to .build/release for consistency with local build
+        if [ -n "$SPARKLE_FOUND" ] && [ -d "$SPARKLE_FOUND" ]; then
+          mkdir -p .build/release
+          cp -R "$SPARKLE_FOUND" .build/release/
+          echo "✓ Copied Sparkle.framework to .build/release/"
+        else
+          echo "❌ ERROR: Could not find or build Sparkle.framework"
+          exit 1
+        fi
+
     - name: Create app bundle
       run: |
+        # Use the tested build script
+        chmod +x build_app_bundle.sh
+
+        # Modify script to use current directory instead of .build/release/
+        APP_NAME="AudioRemote"
+        BUILD_DIR=".build/release"
+
         # Create app bundle structure
         mkdir -p AudioRemote.app/Contents/MacOS
         mkdir -p AudioRemote.app/Contents/Resources
         mkdir -p AudioRemote.app/Contents/Frameworks
 
         # Copy binary
-        cp .build/release/AudioRemote AudioRemote.app/Contents/MacOS/
+        cp $BUILD_DIR/$APP_NAME AudioRemote.app/Contents/MacOS/
 
-        # Copy resources
+        # Copy Info.plist
         cp AudioRemote/Resources/Info.plist AudioRemote.app/Contents/
-        if [ -f AudioRemote/Resources/AppIcon.icns ]; then
-          cp AudioRemote/Resources/AppIcon.icns AudioRemote.app/Contents/Resources/
-        fi
+
+        # Copy icon assets
         if [ -d AudioRemote/Resources/Assets.xcassets ]; then
           cp -R AudioRemote/Resources/Assets.xcassets AudioRemote.app/Contents/Resources/
         fi
 
-        # Copy resource bundle if it exists
-        if [ -d .build/release/AudioRemote_AudioRemote.bundle ]; then
-          cp -R .build/release/AudioRemote_AudioRemote.bundle AudioRemote.app/Contents/Resources/
+        # Copy Resources bundle
+        if [ -d $BUILD_DIR/AudioRemote_AudioRemote.bundle ]; then
+          cp -R $BUILD_DIR/AudioRemote_AudioRemote.bundle AudioRemote.app/Contents/Resources/
         fi
 
-        # Copy Sparkle framework (CRITICAL for auto-updates)
-        if [ -d .build/release/Sparkle.framework ]; then
-          cp -R .build/release/Sparkle.framework AudioRemote.app/Contents/Frameworks/
-          echo "✓ Copied Sparkle.framework"
+        # Copy Sparkle framework (CRITICAL)
+        if [ -d $BUILD_DIR/Sparkle.framework ]; then
+          cp -R $BUILD_DIR/Sparkle.framework AudioRemote.app/Contents/Frameworks/
+          echo "✓ Copied Sparkle.framework to app bundle"
         else
-          echo "⚠️ Warning: Sparkle.framework not found"
+          echo "❌ ERROR: Sparkle.framework not found in $BUILD_DIR"
+          exit 1
         fi
 
-        # Make binary executable
-        chmod +x AudioRemote.app/Contents/MacOS/AudioRemote
+        # Set executable permission
+        chmod +x AudioRemote.app/Contents/MacOS/$APP_NAME
 
         # Create PkgInfo
         echo "APPL????" > AudioRemote.app/Contents/PkgInfo
 
         # Fix rpath for frameworks
-        install_name_tool -add_rpath "@executable_path/../Frameworks" AudioRemote.app/Contents/MacOS/AudioRemote 2>/dev/null || true
+        install_name_tool -add_rpath "@executable_path/../Frameworks" AudioRemote.app/Contents/MacOS/$APP_NAME 2>/dev/null || true
+
+        echo "✅ App bundle created successfully"
 
     - name: Create DMG
       run: |
