@@ -6,6 +6,9 @@ on:
       - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3
   workflow_dispatch:  # Allows manual trigger from GitHub Actions tab
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: macos-latest
