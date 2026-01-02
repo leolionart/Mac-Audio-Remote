@@ -20,7 +20,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 13:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.4/AudioRemote-2.2.4.zip"
-                   sparkle:version="2.2.4"
+                   sparkle:version="12"
                    sparkle:shortVersionString="2.2.4"
                    sparkle:edSignature="uneSqpkfQ+dCoS5sHcZ+ZPzkWz0RK2FCwz6mNoHrNpP9MBWodUvzhE3H6uo6vsxS1bUwnN3bWxBq4BE5wRlVAQ=="
                    length="14290482"
@@ -40,7 +40,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 12:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.3/AudioRemote-2.2.3.zip"
-                   sparkle:version="2.2.3"
+                   sparkle:version="10"
                    sparkle:shortVersionString="2.2.3"
                    sparkle:edSignature="It+lGdtiYS+O5SNqRnY5zh7MYpQtEQR6ojanIPzrlRV3wuCRax6jl/T0zvrkE85NwlNkjsa/MLhiwRrIdXA4Cg=="
                    length="14283435"
@@ -61,7 +61,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 11:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.2/AudioRemote-2.2.2.zip"
-                   sparkle:version="2.2.2"
+                   sparkle:version="8"
                    sparkle:shortVersionString="2.2.2"
                    sparkle:edSignature="cTz140fT03Z3QpShHrS9uPdq1vMDSgZ+bU0jzXYxRlH6p/dEEq1FoQgiXiHAG5UXAE5mlpvqhFWnn8q47S0rDA=="
                    length="14283415"
@@ -84,7 +84,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 10:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.1/AudioRemote-2.2.1.zip"
-                   sparkle:version="2.2.1"
+                   sparkle:version="6"
                    sparkle:shortVersionString="2.2.1"
                    sparkle:edSignature="BEqE4RMY0th7ZiFf3PQpzNYR8R7n1TxC7AVJ5fF4+XVYi5nEqsV88T2FnnToB/YOnHUtpWJMeNunHGQTVCBtBA=="
                    length="14290950"
