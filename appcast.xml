@@ -6,6 +6,26 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.3</title>
+        <description><![CDATA[
+                <h2>Version 2.2.3</h2>
+                <ul>
+                    <li>✨ New: Automatic update installation (no manual download needed)</li>
+                    <li>🔧 Fix: Sparkle now shows "Install Update" button in update dialog</li>
+                    <li>⚡ Enhanced: SUAutomaticallyUpdate enabled for seamless updates</li>
+                    <li>🎯 Enhanced: Users can now update with one click from notification</li>
+                </ul>
+        ]]></description>
+        <pubDate>Fri, 02 Jan 2026 23:06:56 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.3/AudioRemote-2.2.3.zip"
+                   sparkle:version="2.2.3"
+                   sparkle:shortVersionString="2.2.3"
+                   sparkle:edSignature="It+lGdtiYS+O5SNqRnY5zh7MYpQtEQR6ojanIPzrlRV3wuCRax6jl/T0zvrkE85NwlNkjsa/MLhiwRrIdXA4Cg=="
+                   length="14283435"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.2</title>
         <description><![CDATA[
                 <h2>Version 2.2.2</h2>
