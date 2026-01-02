@@ -18,7 +18,7 @@
                     <li>⚡ Enhanced: HUD dispatched to main thread safely (non-blocking)</li>
                 </ul>
         ]]></description>
-        <pubDate>Fri, 02 Jan 2026 23:36:10 GMT</pubDate>
+        <pubDate>Fri, 03 Jan 2026 13:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.4/AudioRemote-2.2.4.zip"
                    sparkle:version="2.2.4"
                    sparkle:shortVersionString="2.2.4"
