@@ -45,7 +45,7 @@ struct SettingsView: View {
                 SettingsSection(settingsManager: settingsManager)
                     .padding(.horizontal, 24)
 
-                // Update Section
+                // Update Section (Free Version - Opens GitHub)
                 UpdateSection(updateManager: updateManager)
                     .padding(.horizontal, 24)
 
@@ -611,12 +611,12 @@ struct UpdateSection: View {
                             .frame(width: 36, height: 36)
                             .cornerRadius(8)
 
-                        Text("🔄")
+                        Text("📦")
                             .font(.system(size: 18))
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("App Version")
+                        Text("Current Version")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
 
@@ -628,7 +628,7 @@ struct UpdateSection: View {
                     Spacer()
 
                     if let lastCheck = updateManager.lastUpdateCheckDate {
-                        Text("Last: \(formatDate(lastCheck))")
+                        Text("Checked: \(formatDate(lastCheck))")
                             .font(.system(size: 11))
                             .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
                     }
@@ -639,7 +639,7 @@ struct UpdateSection: View {
                 Button(action: {
                     isChecking = true
                     updateManager.checkForUpdates()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         isChecking = false
                     }
                 }) {
@@ -662,39 +662,19 @@ struct UpdateSection: View {
                 .disabled(isChecking)
                 .padding(.horizontal, 20)
 
-                Divider()
-                    .background(Color(red: 0.22, green: 0.25, blue: 0.32))
-                    .padding(.horizontal, 20)
-
-                // Auto Update Settings
-                HStack(spacing: 12) {
-                    ZStack {
-                        Color(red: 0.10, green: 0.10, blue: 0.18)
-                            .frame(width: 36, height: 36)
-                            .cornerRadius(8)
-
-                        Text("⚙️")
-                            .font(.system(size: 18))
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Auto Update")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        Text("Automatically check for updates")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
-                    }
-
+                // Info message
+                HStack(spacing: 8) {
+                    Text("ℹ️")
+                        .font(.system(size: 14))
+                    Text("Automatic updates via Sparkle framework")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
                     Spacer()
-
-                    Toggle("", isOn: Binding(
-                        get: { updateManager.automaticallyChecksForUpdates },
-                        set: { updateManager.automaticallyChecksForUpdates = $0 }
-                    ))
-                    .toggleStyle(CustomToggleStyle())
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(Color(red: 0.10, green: 0.10, blue: 0.18))
+                .cornerRadius(8)
                 .padding(.horizontal, 20)
             }
             .padding(.bottom, 20)

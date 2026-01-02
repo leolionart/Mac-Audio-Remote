@@ -58,4 +58,12 @@ class NotificationService {
         let body = "Toggled from \(source)"
         show(title: title, body: body)
     }
+
+    func showUpdateAvailable(version: String) {
+        show(title: "🎉 Update Available", body: "Version \(version) is now available. Open Settings to update.")
+    }
+
+    func showInfo(message: String) {
+        show(title: "ℹ️ Audio Remote", body: message)
+    }
 }

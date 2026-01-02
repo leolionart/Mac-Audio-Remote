@@ -37,3 +37,9 @@ dist/
 # Other
 *.swp
 *~
+
+# Sparkle Keys - NEVER COMMIT!
+.sparkle_keys/
+
+# Release builds (keep locally)
+releases/

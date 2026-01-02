@@ -21,6 +21,11 @@ echo "Copying frameworks..."
 if [ -d ".build/arm64-apple-macosx/release/Sparkle.framework" ]; then
     cp -R .build/arm64-apple-macosx/release/Sparkle.framework AudioRemote.app/Contents/Frameworks/
     echo "✓ Sparkle framework copied"
+
+    # Fix rpath for Sparkle
+    echo "Fixing rpath for Sparkle..."
+    install_name_tool -add_rpath "@executable_path/../Frameworks" AudioRemote.app/Contents/MacOS/AudioRemote || true
+    echo "✓ rpath configured"
 else
     echo "⚠️  Warning: Sparkle framework not found"
 fi

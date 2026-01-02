@@ -29,7 +29,7 @@
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/YOUR_USERNAME/mac-audio-remote/main/appcast.xml</string>
+    <string>https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
     <key>SUScheduledCheckInterval</key>
