@@ -50,7 +50,11 @@ struct SettingsView: View {
                     .padding(.horizontal, 24)
 
                 // Network Info Section
-                NetworkSection(localIP: localIP, port: settingsManager.settings.httpPort)
+                NetworkSection(
+                    localIP: localIP,
+                    port: settingsManager.settings.httpPort,
+                    serverRunning: settingsManager.settings.httpServerEnabled
+                )
                     .padding(.horizontal, 24)
 
                 // Footer
@@ -620,7 +624,7 @@ struct UpdateSection: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
 
-                        Text("Version 2.0.0")
+                        Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                             .font(.system(size: 12))
                             .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
                     }
@@ -698,6 +702,7 @@ struct UpdateSection: View {
 struct NetworkSection: View {
     let localIP: String
     let port: Int
+    let serverRunning: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -716,8 +721,8 @@ struct NetworkSection: View {
             .padding(.bottom, 16)
 
             HStack(spacing: 8) {
-                ConnectionItem(icon: "💻", label: localIP, isActive: true)
-                ConnectionItem(icon: "🌐", label: "localhost:\(port)", isActive: false)
+                ConnectionItem(icon: "💻", label: localIP, isActive: serverRunning)
+                ConnectionItem(icon: "🌐", label: "localhost:\(port)", isActive: serverRunning)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -766,7 +771,7 @@ struct ConnectionItem: View {
 struct FooterView: View {
     var body: some View {
         VStack(spacing: 4) {
-            Text("Audio Remote Server v2.0")
+            Text("Audio Remote Server v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                 .font(.system(size: 12))
                 .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
 

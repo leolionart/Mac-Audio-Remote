@@ -164,10 +164,13 @@ class MenuBarController {
     }
 
     @objc private func openAbout() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+
         let alert = NSAlert()
         alert.messageText = "Audio Remote"
         alert.informativeText = """
-        Version 2.0.0
+        Version \(version) (build \(build))
 
         A native macOS menu bar app to control audio input/output remotely.
 
