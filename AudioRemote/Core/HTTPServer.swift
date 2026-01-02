@@ -124,6 +124,22 @@ class HTTPServer {
             self.audioManager.increaseOutputVolume(step)
             self.settingsManager.incrementRequestCount()
 
+            // Show notification if enabled
+            if self.settingsManager.settings.notificationsEnabled {
+                NotificationService.shared.showVolumeChange(
+                    volume: self.audioManager.outputVolume,
+                    source: "Remote"
+                )
+            }
+
+            // Show HUD overlay
+            await MainActor.run {
+                VolumeHUDController.shared.show(
+                    volume: self.audioManager.outputVolume,
+                    isMuted: self.audioManager.isOutputMuted
+                )
+            }
+
             return VolumeResponse(
                 status: "ok",
                 volume: self.audioManager.outputVolume,
@@ -140,6 +156,22 @@ class HTTPServer {
             let step = self.settingsManager.settings.volumeStep
             self.audioManager.decreaseOutputVolume(step)
             self.settingsManager.incrementRequestCount()
+
+            // Show notification if enabled
+            if self.settingsManager.settings.notificationsEnabled {
+                NotificationService.shared.showVolumeChange(
+                    volume: self.audioManager.outputVolume,
+                    source: "Remote"
+                )
+            }
+
+            // Show HUD overlay
+            await MainActor.run {
+                VolumeHUDController.shared.show(
+                    volume: self.audioManager.outputVolume,
+                    isMuted: self.audioManager.isOutputMuted
+                )
+            }
 
             return VolumeResponse(
                 status: "ok",
@@ -162,6 +194,22 @@ class HTTPServer {
             self.audioManager.setOutputVolume(request.volume)
             self.settingsManager.incrementRequestCount()
 
+            // Show notification if enabled
+            if self.settingsManager.settings.notificationsEnabled {
+                NotificationService.shared.showVolumeChange(
+                    volume: self.audioManager.outputVolume,
+                    source: "Remote"
+                )
+            }
+
+            // Show HUD overlay
+            await MainActor.run {
+                VolumeHUDController.shared.show(
+                    volume: self.audioManager.outputVolume,
+                    isMuted: self.audioManager.isOutputMuted
+                )
+            }
+
             return VolumeResponse(
                 status: "ok",
                 volume: self.audioManager.outputVolume,
@@ -180,9 +228,17 @@ class HTTPServer {
 
             // Show notification if enabled
             if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.show(
-                    title: muted ? "🔇 Volume Muted" : "🔊 Volume Unmuted",
-                    body: "Toggled from Remote"
+                NotificationService.shared.showVolumeMute(
+                    isMuted: muted,
+                    source: "Remote"
+                )
+            }
+
+            // Show HUD overlay
+            await MainActor.run {
+                VolumeHUDController.shared.show(
+                    volume: self.audioManager.outputVolume,
+                    isMuted: self.audioManager.isOutputMuted
                 )
             }
 

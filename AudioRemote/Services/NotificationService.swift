@@ -59,6 +59,19 @@ class NotificationService {
         show(title: title, body: body)
     }
 
+    func showVolumeChange(volume: Float, source: String = "Remote") {
+        let volumePercent = Int(volume * 100)
+        let title = "🔊 Volume"
+        let body = "\(volumePercent)% - Changed from \(source)"
+        show(title: title, body: body)
+    }
+
+    func showVolumeMute(isMuted: Bool, source: String = "Remote") {
+        let title = isMuted ? "🔇 Volume Muted" : "🔊 Volume Unmuted"
+        let body = "Toggled from \(source)"
+        show(title: title, body: body)
+    }
+
     func showUpdateAvailable(version: String) {
         show(title: "🎉 Update Available", body: "Version \(version) is now available. Open Settings to update.")
     }

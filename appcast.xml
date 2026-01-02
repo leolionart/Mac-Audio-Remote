@@ -6,6 +6,25 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
         <item>
+            <title>Version 2.1.0</title>
+            <description><![CDATA[
+                <h2>Version 2.1.0</h2>
+                <ul>
+                    <li>✨ New: On-screen volume HUD overlay (macOS-style display)</li>
+                    <li>✨ New: Notifications for all volume operations</li>
+                    <li>🎯 Enhanced: Volume increase/decrease notifications</li>
+                    <li>🎯 Enhanced: Volume mute/unmute notifications</li>
+                </ul>
+            ]]></description>
+            <pubDate>Fri, 02 Jan 2026 10:28:19 GMT</pubDate>
+            <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.0/AudioRemote-2.1.0.zip"
+                       sparkle:version="2.1.0"
+                       sparkle:shortVersionString="2.1.0"
+                       length="0"
+                       type="application/octet-stream" />
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+        <item>
             <title>Version 2.0.0</title>
             <description><![CDATA[
                 <h2>Version 2.0.0</h2>
