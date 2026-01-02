@@ -17,7 +17,7 @@
                     <li>✅ Verified: All webhooks tested and working (increase, decrease, set, toggle-mute, status)</li>
                 </ul>
         ]]></description>
-        <pubDate>Fri, 02 Jan 2026 19:14:54 GMT</pubDate>
+        <pubDate>Fri, 03 Jan 2026 11:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.2/AudioRemote-2.2.2.zip"
                    sparkle:version="2.2.2"
                    sparkle:shortVersionString="2.2.2"
