@@ -20,11 +20,12 @@
                     <li>📱 Enhanced: Modern macOS design matching system apps</li>
                 </ul>
         ]]></description>
-        <pubDate>Fri, 02 Jan 2026 17:53:48 GMT</pubDate>
+        <pubDate>Fri, 03 Jan 2026 09:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.0/AudioRemote-2.2.0.zip"
                    sparkle:version="2.2.0"
                    sparkle:shortVersionString="2.2.0"
-                   length="14290840"
+                   sparkle:edSignature="8xLxHKCBDo1G1vJSDFU9Pd/tVIEElTgjdrrtzKtIAbmvRmoxkHUZjwcp5qCib97jUwcHgEhHRFcgM4xuEzPOCA=="
+                   length="14290954"
                    type="application/octet-stream" />
         <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
     </item>

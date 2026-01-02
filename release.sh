@@ -159,10 +159,37 @@ echo -e "${BLUE}[6/9] 📦 Creating ZIP archive...${NC}"
 cd .build/release
 rm -f "AudioRemote-${NEW_VERSION}.zip"
 zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app > /dev/null
-ZIP_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.zip")
+
+# Sign the ZIP file with EdDSA signature for Sparkle
+echo -e "${BLUE}  Signing update with EdDSA...${NC}"
+
+# Check if sign_update exists
+SIGN_UPDATE=""
+if [ -f "/tmp/bin/sign_update" ]; then
+    SIGN_UPDATE="/tmp/bin/sign_update"
+elif [ -f ".build/artifacts/sparkle/Sparkle/bin/sign_update" ]; then
+    SIGN_UPDATE=".build/artifacts/sparkle/Sparkle/bin/sign_update"
+else
+    echo -e "${YELLOW}  ⚠️  sign_update tool not found, downloading Sparkle...${NC}"
+    curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz 2>/dev/null
+    tar xf /tmp/Sparkle.tar.xz -C /tmp 2>/dev/null
+    SIGN_UPDATE="/tmp/bin/sign_update"
+fi
+
+# Get signature
+SIGNATURE_OUTPUT=$($SIGN_UPDATE "AudioRemote-${NEW_VERSION}.zip" 2>&1)
+ED_SIGNATURE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
+ZIP_SIZE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
 ZIP_SIZE_MB=$(echo "scale=2; $ZIP_SIZE / 1024 / 1024" | bc)
 
+if [ -z "$ED_SIGNATURE" ]; then
+    echo -e "${RED}❌ Failed to generate EdDSA signature${NC}"
+    echo "Output: $SIGNATURE_OUTPUT"
+    exit 1
+fi
+
 echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.zip (${ZIP_SIZE_MB} MB)${NC}"
+echo -e "${GREEN}✓ Signed with EdDSA${NC}"
 cd ../..
 echo ""
 
@@ -196,6 +223,7 @@ ${RELEASE_NOTES_HTML}
         <enclosure url=\"https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip\"
                    sparkle:version=\"${NEW_VERSION}\"
                    sparkle:shortVersionString=\"${NEW_VERSION}\"
+                   sparkle:edSignature=\"${ED_SIGNATURE}\"
                    length=\"${ZIP_SIZE}\"
                    type=\"application/octet-stream\" />
         <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
