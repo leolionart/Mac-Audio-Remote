@@ -39,16 +39,41 @@ jobs:
         # Create app bundle structure
         mkdir -p AudioRemote.app/Contents/MacOS
         mkdir -p AudioRemote.app/Contents/Resources
+        mkdir -p AudioRemote.app/Contents/Frameworks
 
         # Copy binary
         cp .build/release/AudioRemote AudioRemote.app/Contents/MacOS/
 
         # Copy resources
         cp AudioRemote/Resources/Info.plist AudioRemote.app/Contents/
-        cp AudioRemote/Resources/AppIcon.icns AudioRemote.app/Contents/Resources/
+        if [ -f AudioRemote/Resources/AppIcon.icns ]; then
+          cp AudioRemote/Resources/AppIcon.icns AudioRemote.app/Contents/Resources/
+        fi
+        if [ -d AudioRemote/Resources/Assets.xcassets ]; then
+          cp -R AudioRemote/Resources/Assets.xcassets AudioRemote.app/Contents/Resources/
+        fi
+
+        # Copy resource bundle if it exists
+        if [ -d .build/release/AudioRemote_AudioRemote.bundle ]; then
+          cp -R .build/release/AudioRemote_AudioRemote.bundle AudioRemote.app/Contents/Resources/
+        fi
+
+        # Copy Sparkle framework (CRITICAL for auto-updates)
+        if [ -d .build/release/Sparkle.framework ]; then
+          cp -R .build/release/Sparkle.framework AudioRemote.app/Contents/Frameworks/
+          echo "✓ Copied Sparkle.framework"
+        else
+          echo "⚠️ Warning: Sparkle.framework not found"
+        fi
 
         # Make binary executable
         chmod +x AudioRemote.app/Contents/MacOS/AudioRemote
+
+        # Create PkgInfo
+        echo "APPL????" > AudioRemote.app/Contents/PkgInfo
+
+        # Fix rpath for frameworks
+        install_name_tool -add_rpath "@executable_path/../Frameworks" AudioRemote.app/Contents/MacOS/AudioRemote 2>/dev/null || true
 
     - name: Create DMG
       run: |
@@ -71,7 +96,13 @@ jobs:
 
     - name: Create ZIP archive
       run: |
-        zip -r AudioRemote.zip AudioRemote.app
+        # Get version from tag (v2.1.0 -> 2.1.0)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        if [ -z "$VERSION" ] || [ "$VERSION" == "$GITHUB_REF" ]; then
+          VERSION="dev"
+        fi
+        zip -r AudioRemote-${VERSION}.zip AudioRemote.app
+        echo "Created AudioRemote-${VERSION}.zip"
 
     - name: Get version from tag
       id: get_version
@@ -88,30 +119,48 @@ jobs:
       with:
         files: |
           AudioRemote.dmg
-          AudioRemote.zip
+          AudioRemote-*.zip
         body: |
           ## Audio Remote ${{ steps.get_version.outputs.VERSION }}
 
           Native macOS menu bar app for controlling microphone and speaker audio.
 
-          ### Features
-          - 🎤 Toggle microphone on/off
+          ### ✨ What's New in this Release
+
+          Check the commit history for detailed changes in this version.
+
+          ### 🎯 Core Features
+          - 🎤 Toggle microphone on/off with ultra-fast ~1ms latency
           - 🔊 Control speaker volume (increase/decrease/mute)
+          - 🖥️ On-screen volume HUD overlay (macOS-style)
+          - 🔔 Notifications for all audio operations
           - 📱 iOS Shortcuts integration via HTTP API
-          - 🌐 Web UI for remote control
-          - ⚡️ Ultra-fast ~1ms toggle latency with Core Audio
+          - 🌐 Web UI for remote control (http://YOUR_MAC_IP:8765)
+          - ⚡️ Built with Swift + Core Audio for native performance
+          - 🔄 Automatic updates via Sparkle
 
-          ### Installation
-          1. Download `AudioRemote.dmg`
-          2. Open the DMG and drag Audio Remote to Applications
+          ### 📥 Installation
+          1. Download `AudioRemote-${{ steps.get_version.outputs.VERSION }}.zip`
+          2. Extract and move `AudioRemote.app` to Applications folder
           3. Launch from Applications folder
-          4. Grant microphone permissions when prompted
+          4. Grant microphone and notification permissions when prompted
 
-          ### Requirements
+          ### ⚙️ Requirements
           - macOS 13.0 (Ventura) or later
+          - Microphone permission (for mic toggle)
+          - Notification permission (for audio notifications)
 
-          ### What's New
-          See [FEATURES.md](https://github.com/leolionart/Mac-Audio-Remote/blob/main/FEATURES.md) for full changelog.
+          ### 📱 iOS Shortcuts Integration
+          Control your Mac remotely:
+          ```
+          POST http://YOUR_MAC_IP:8765/toggle-mic       # Toggle microphone
+          POST http://YOUR_MAC_IP:8765/volume/increase   # Increase volume
+          POST http://YOUR_MAC_IP:8765/volume/decrease   # Decrease volume
+          POST http://YOUR_MAC_IP:8765/volume/toggle-mute # Mute/unmute
+          GET  http://YOUR_MAC_IP:8765/status            # Get current status
+          ```
+
+          For full documentation, visit the [GitHub repository](https://github.com/leolionart/Mac-Audio-Remote).
         draft: false
         prerelease: false
       env:
