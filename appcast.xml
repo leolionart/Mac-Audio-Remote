@@ -20,10 +20,10 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 01:16:47 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.5/AudioRemote-2.2.5.zip"
-                   sparkle:version="2.2.5"
+                   sparkle:version="13"
                    sparkle:shortVersionString="2.2.5"
-                   sparkle:edSignature="ci0N3n+675lp/Ngvev4V1oxXdDMjtdr+1OpB3G6pRsZSoj16LjEunl2R42ym+6Drzby4AfPXN9pSHy5MF5K5CA=="
-                   length="14290482"
+                   sparkle:edSignature="SI6wuqzktS85xUS/V2KvClriFfJ7x7NCZIKgPwSxeBU3sMNlQI8riDLzfoiHXjUQVFNNulkR0L+xCah3R4v2DA=="
+                   length="14371555"
                    type="application/octet-stream" />
         <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
     </item>
