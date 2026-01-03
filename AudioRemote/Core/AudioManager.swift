@@ -39,7 +39,7 @@ class AudioManager: ObservableObject {
         let newVolume: Float32 = (volume == 0.0) ? 1.0 : 0.0
         setVolume(newVolume)
         updateCurrentState()
-        return isMuted
+        return (newVolume == 0.0) // Return new muted state directly
     }
 
     /// Get current microphone volume (0.0 = muted, 1.0 = full)
