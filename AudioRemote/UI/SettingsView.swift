@@ -1,5 +1,19 @@
 import SwiftUI
 
+// MARK: - Theme Colors
+private enum ThemeColors {
+    static let background = Color(red: 0.10, green: 0.10, blue: 0.18)     // #1a1a2e
+    static let cardBg = Color(red: 0.12, green: 0.16, blue: 0.22)
+    static let border = Color(red: 0.22, green: 0.25, blue: 0.32)
+    static let textMuted = Color(red: 0.42, green: 0.45, blue: 0.50)
+    static let textSecondary = Color(red: 0.61, green: 0.64, blue: 0.69)
+    static let accent = Color(red: 0.06, green: 0.73, blue: 0.51)         // Green
+    static let accentBlue = Color(red: 0.23, green: 0.51, blue: 0.96)
+    static let accentPurple = Color(red: 0.55, green: 0.36, blue: 0.96)
+    static let accentOrange = Color(red: 0.96, green: 0.62, blue: 0.04)
+    static let error = Color(red: 0.94, green: 0.27, blue: 0.27)
+}
+
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
     @ObservedObject var audioManager: AudioManager
@@ -103,18 +117,16 @@ struct HeaderView: View {
                 // App Icon
                 ZStack {
                     LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(red: 0.06, green: 0.73, blue: 0.51), // #10b981
-                            Color(red: 0.23, green: 0.51, blue: 0.96)  // #3b82f6
-                        ]),
+                        gradient: Gradient(colors: [ThemeColors.accent, ThemeColors.accentBlue]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     .frame(width: 48, height: 48)
                     .cornerRadius(12)
 
-                    Text("🎤")
-                        .font(.system(size: 24))
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -123,7 +135,7 @@ struct HeaderView: View {
                         .foregroundColor(.white)
                     Text("Remote Audio Control")
                         .font(.system(size: 13))
-                        .foregroundColor(Color(red: 0.61, green: 0.64, blue: 0.69))
+                        .foregroundColor(ThemeColors.textSecondary)
                 }
             }
 
@@ -132,18 +144,18 @@ struct HeaderView: View {
             // Status Badge
             HStack(spacing: 8) {
                 Circle()
-                    .fill(Color(red: 0.06, green: 0.73, blue: 0.51))
+                    .fill(ThemeColors.accent)
                     .frame(width: 8, height: 8)
                 Text("Running")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(Color(red: 0.06, green: 0.73, blue: 0.51))
+                    .foregroundColor(ThemeColors.accent)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(red: 0.06, green: 0.73, blue: 0.51).opacity(0.15))
+            .background(ThemeColors.accent.opacity(0.15))
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color(red: 0.06, green: 0.73, blue: 0.51), lineWidth: 1)
+                    .stroke(ThemeColors.accent, lineWidth: 1)
             )
             .cornerRadius(20)
         }
@@ -161,8 +173,9 @@ struct FeatureCard: View {
                         .frame(width: 56, height: 56)
                         .cornerRadius(12)
 
-                    Text("📱")
-                        .font(.system(size: 28))
+                    Image(systemName: "iphone")
+                        .font(.system(size: 26))
+                        .foregroundColor(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -176,7 +189,7 @@ struct FeatureCard: View {
                             .foregroundColor(.black)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(Color(red: 0.96, green: 0.62, blue: 0.04))
+                            .background(ThemeColors.accentOrange)
                             .cornerRadius(4)
                     }
 
@@ -195,7 +208,7 @@ struct FeatureCard: View {
             }) {
                 Text("Setup Guide")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.18))
+                    .foregroundColor(ThemeColors.background)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(Color.white)
@@ -231,7 +244,7 @@ struct StatsGrid: View {
                 icon: "🎙️",
                 label: "MIC STATUS",
                 value: audioManager.isMuted ? "OFF" : "ON",
-                valueColor: audioManager.isMuted ? Color(red: 0.94, green: 0.27, blue: 0.27) : Color(red: 0.06, green: 0.73, blue: 0.51),
+                valueColor: audioManager.isMuted ? ThemeColors.error : ThemeColors.accent,
                 subtitle: audioManager.isMuted ? "muted" : "active"
             )
 
@@ -239,7 +252,7 @@ struct StatsGrid: View {
                 icon: "⚡",
                 label: "REQUESTS",
                 value: "\(requestCount)",
-                valueColor: Color(red: 0.23, green: 0.51, blue: 0.96),
+                valueColor: ThemeColors.accentBlue,
                 subtitle: "total"
             )
 
@@ -247,7 +260,7 @@ struct StatsGrid: View {
                 icon: "🌐",
                 label: "PORT",
                 value: "\(port)",
-                valueColor: Color(red: 0.55, green: 0.36, blue: 0.96),
+                valueColor: ThemeColors.accentPurple,
                 subtitle: "HTTP"
             )
 
@@ -255,7 +268,7 @@ struct StatsGrid: View {
                 icon: "✅",
                 label: "UPTIME",
                 value: uptime,
-                valueColor: Color(red: 0.96, green: 0.62, blue: 0.04),
+                valueColor: ThemeColors.accentOrange,
                 subtitle: "since start"
             )
         }
@@ -276,7 +289,7 @@ struct StatCard: View {
                     .font(.system(size: 12))
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                    .foregroundColor(ThemeColors.textMuted)
                     .textCase(.uppercase)
                     .tracking(0.5)
             }
@@ -287,14 +300,14 @@ struct StatCard: View {
 
             Text(subtitle)
                 .font(.system(size: 12))
-                .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                .foregroundColor(ThemeColors.textMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color(red: 0.12, green: 0.16, blue: 0.22))
+        .background(ThemeColors.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(12)
     }
@@ -317,7 +330,7 @@ struct WebhookSection: View {
                 Spacer()
                 Text("HTTP API")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                    .foregroundColor(ThemeColors.textMuted)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -338,33 +351,16 @@ struct WebhookSection: View {
             }
             .padding(.horizontal, 20)
 
-            Button(action: {
-                let muted = audioManager.toggle()
-                settingsManager.incrementRequestCount()
-                if settingsManager.settings.notificationsEnabled {
-                    NotificationService.shared.showMicToggle(isMuted: muted, source: "Settings")
-                }
-            }) {
-                HStack {
-                    Text("🎤")
-                    Text("Test Toggle Mic")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(.white)
+            // Combined toggle button with status
+            MicToggleButton(audioManager: audioManager, settingsManager: settingsManager)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color(red: 0.23, green: 0.51, blue: 0.96))
-                .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
         }
-        .background(Color(red: 0.12, green: 0.16, blue: 0.22))
+        .background(ThemeColors.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(16)
     }
@@ -378,15 +374,65 @@ struct SectionDivider: View {
         HStack {
             Text(title)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                .foregroundColor(ThemeColors.textMuted)
                 .textCase(.uppercase)
                 .tracking(1)
             Rectangle()
-                .fill(Color(red: 0.22, green: 0.25, blue: 0.32))
+                .fill(ThemeColors.border)
                 .frame(height: 1)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Mic Toggle Button (Combined Button + Status)
+struct MicToggleButton: View {
+    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var settingsManager: SettingsManager
+
+    var body: some View {
+        Button(action: {
+            let muted = audioManager.toggle()
+            settingsManager.incrementRequestCount()
+            if settingsManager.settings.notificationsEnabled {
+                NotificationService.shared.showMicToggle(isMuted: muted, source: "Settings")
+            }
+        }) {
+            HStack(spacing: 12) {
+                // Status icon
+                Image(systemName: audioManager.isMuted ? "mic.slash.fill" : "mic.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(.white)
+
+                // Dynamic text showing current state
+                Text(audioManager.isMuted ? "Unmute Microphone" : "Mute Microphone")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                // Status badge
+                Text(audioManager.isMuted ? "MUTED" : "ACTIVE")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        (audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
+                            .opacity(0.15)
+                    )
+                    .cornerRadius(4)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(audioManager.isMuted ? ThemeColors.error.opacity(0.8) : ThemeColors.accent.opacity(0.8))
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: audioManager.isMuted)
     }
 }
 
@@ -399,13 +445,13 @@ struct URLDisplayRow: View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                .foregroundColor(ThemeColors.textMuted)
                 .textCase(.uppercase)
                 .frame(width: 50, alignment: .leading)
 
             Text(url)
                 .font(.system(size: 14, design: .monospaced))
-                .foregroundColor(Color(red: 0.06, green: 0.73, blue: 0.51))
+                .foregroundColor(ThemeColors.accent)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -423,17 +469,17 @@ struct URLDisplayRow: View {
                     .foregroundColor(.black)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(copied ? Color(red: 0.23, green: 0.51, blue: 0.96) : Color(red: 0.06, green: 0.73, blue: 0.51))
+                    .background(copied ? ThemeColors.accentBlue : ThemeColors.accent)
                     .cornerRadius(8)
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(red: 0.10, green: 0.10, blue: 0.18))
+        .background(ThemeColors.background)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(10)
     }
@@ -458,7 +504,7 @@ struct SettingsSection: View {
 
             VStack(spacing: 0) {
                 SettingRow(
-                    icon: "🚀",
+                    icon: "rocket.fill",
                     title: "Start at Login",
                     description: "Launch server when macOS starts",
                     isOn: Binding(
@@ -472,11 +518,11 @@ struct SettingsSection: View {
                 )
 
                 Divider()
-                    .background(Color(red: 0.22, green: 0.25, blue: 0.32))
+                    .background(ThemeColors.border)
                     .padding(.horizontal, 20)
 
                 SettingRow(
-                    icon: "🔔",
+                    icon: "bell.fill",
                     title: "Notifications",
                     description: "Show alerts when mic state changes",
                     isOn: Binding(
@@ -494,11 +540,11 @@ struct SettingsSection: View {
                 )
 
                 Divider()
-                    .background(Color(red: 0.22, green: 0.25, blue: 0.32))
+                    .background(ThemeColors.border)
                     .padding(.horizontal, 20)
 
                 SettingRow(
-                    icon: "🌐",
+                    icon: "globe",
                     title: "HTTP Server",
                     description: "Enable webhook server for remote control",
                     isOn: Binding(
@@ -513,10 +559,10 @@ struct SettingsSection: View {
             }
             .padding(.bottom, 20)
         }
-        .background(Color(red: 0.12, green: 0.16, blue: 0.22))
+        .background(ThemeColors.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(16)
     }
@@ -531,14 +577,15 @@ struct SettingRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Icon
+            // Icon (using SF Symbols)
             ZStack {
-                Color(red: 0.10, green: 0.10, blue: 0.18)
+                ThemeColors.background
                     .frame(width: 36, height: 36)
                     .cornerRadius(8)
 
-                Text(icon)
-                    .font(.system(size: 18))
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(ThemeColors.accent)
             }
 
             // Text
@@ -548,7 +595,7 @@ struct SettingRow: View {
                     .foregroundColor(.white)
                 Text(description)
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                    .foregroundColor(ThemeColors.textMuted)
             }
 
             Spacer()
@@ -569,21 +616,16 @@ struct CustomToggleStyle: ToggleStyle {
         ZStack {
             // Background
             RoundedRectangle(cornerRadius: 28)
-                .fill(configuration.isOn ?
-                      Color(red: 0.06, green: 0.73, blue: 0.51) :
-                      Color(red: 0.10, green: 0.10, blue: 0.18))
+                .fill(configuration.isOn ? ThemeColors.accent : ThemeColors.background)
                 .frame(width: 50, height: 28)
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
-                        .stroke(configuration.isOn ?
-                               Color(red: 0.06, green: 0.73, blue: 0.51) :
-                               Color(red: 0.22, green: 0.25, blue: 0.32),
-                               lineWidth: 2)
+                        .stroke(configuration.isOn ? ThemeColors.accent : ThemeColors.border, lineWidth: 2)
                 )
 
             // Knob
             Circle()
-                .fill(configuration.isOn ? Color.white : Color(red: 0.61, green: 0.64, blue: 0.69))
+                .fill(configuration.isOn ? Color.white : ThemeColors.textSecondary)
                 .frame(width: 20, height: 20)
                 .offset(x: configuration.isOn ? 11 : -11)
                 .animation(.spring(response: 0.3), value: configuration.isOn)
@@ -616,12 +658,13 @@ struct UpdateSection: View {
                 // Update Status
                 HStack(spacing: 12) {
                     ZStack {
-                        Color(red: 0.10, green: 0.10, blue: 0.18)
+                        ThemeColors.background
                             .frame(width: 36, height: 36)
                             .cornerRadius(8)
 
-                        Text("📦")
-                            .font(.system(size: 18))
+                        Image(systemName: "shippingbox.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(ThemeColors.accentOrange)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -631,7 +674,7 @@ struct UpdateSection: View {
 
                         Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                             .font(.system(size: 12))
-                            .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                            .foregroundColor(ThemeColors.textMuted)
                     }
 
                     Spacer()
@@ -639,7 +682,7 @@ struct UpdateSection: View {
                     if let lastCheck = updateManager.lastUpdateCheckDate {
                         Text("Checked: \(formatDate(lastCheck))")
                             .font(.system(size: 11))
-                            .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                            .foregroundColor(ThemeColors.textMuted)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -664,7 +707,7 @@ struct UpdateSection: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(Color(red: 0.23, green: 0.51, blue: 0.96))
+                    .background(ThemeColors.accentBlue)
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
@@ -673,25 +716,26 @@ struct UpdateSection: View {
 
                 // Info message
                 HStack(spacing: 8) {
-                    Text("ℹ️")
+                    Image(systemName: "info.circle")
                         .font(.system(size: 14))
+                        .foregroundColor(ThemeColors.textMuted)
                     Text("Automatic updates via Sparkle framework")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                        .foregroundColor(ThemeColors.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
-                .background(Color(red: 0.10, green: 0.10, blue: 0.18))
+                .background(ThemeColors.background)
                 .cornerRadius(8)
                 .padding(.horizontal, 20)
             }
             .padding(.bottom, 20)
         }
-        .background(Color(red: 0.12, green: 0.16, blue: 0.22))
+        .background(ThemeColors.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(16)
     }
@@ -719,23 +763,23 @@ struct NetworkSection: View {
                 Spacer()
                 Text("Local Network")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                    .foregroundColor(ThemeColors.textMuted)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 16)
 
             HStack(spacing: 8) {
-                ConnectionItem(icon: "💻", label: localIP, isActive: serverRunning)
-                ConnectionItem(icon: "🌐", label: "localhost:\(port)", isActive: serverRunning)
+                ConnectionItem(icon: "desktopcomputer", label: localIP, isActive: serverRunning)
+                ConnectionItem(icon: "globe", label: "localhost:\(port)", isActive: serverRunning)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
-        .background(Color(red: 0.12, green: 0.16, blue: 0.22))
+        .background(ThemeColors.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(red: 0.22, green: 0.25, blue: 0.32), lineWidth: 1)
+                .stroke(ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(16)
     }
@@ -748,25 +792,22 @@ struct ConnectionItem: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(icon)
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(isActive ? ThemeColors.accent : ThemeColors.textMuted)
             Text(label)
                 .font(.system(size: 13))
                 .foregroundColor(.white)
             Circle()
-                .fill(isActive ?
-                     Color(red: 0.06, green: 0.73, blue: 0.51) :
-                     Color(red: 0.42, green: 0.45, blue: 0.50))
+                .fill(isActive ? ThemeColors.accent : ThemeColors.textMuted)
                 .frame(width: 6, height: 6)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color(red: 0.10, green: 0.10, blue: 0.18))
+        .background(ThemeColors.background)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(isActive ?
-                       Color(red: 0.06, green: 0.73, blue: 0.51) :
-                       Color(red: 0.22, green: 0.25, blue: 0.32),
-                       lineWidth: 1)
+                .stroke(isActive ? ThemeColors.accent : ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(20)
     }
@@ -778,17 +819,18 @@ struct FooterView: View {
         VStack(spacing: 4) {
             Text("Audio Remote Server v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                 .font(.system(size: 12))
-                .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                .foregroundColor(ThemeColors.textMuted)
 
             HStack(spacing: 4) {
                 Text("Made with")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
-                Text("❤️")
+                    .foregroundColor(ThemeColors.textMuted)
+                Image(systemName: "heart.fill")
                     .font(.system(size: 10))
+                    .foregroundColor(ThemeColors.error)
                 Text("using Swift")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.42, green: 0.45, blue: 0.50))
+                    .foregroundColor(ThemeColors.textMuted)
             }
         }
     }

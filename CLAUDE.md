@@ -4,172 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Audio Remote is a native macOS menu bar app for controlling both microphone (input) and speaker (output) audio with iOS Shortcuts support. This is a Swift rewrite of a previous Python microphone-only implementation, achieving 50x faster toggle latency (~1ms vs ~50ms) and 80% memory reduction.
+Audio Remote is a native macOS menu bar app for controlling both microphone (input) and speaker (output) audio with iOS Shortcuts support. This is a Swift rewrite of a previous Python implementation, achieving 50x faster toggle latency (~1ms vs ~50ms).
 
 **Key Technologies:**
 - Swift 5.9+ with SwiftUI for UI
 - Core Audio API for direct audio device control (input & output)
 - Vapor framework for HTTP server
+- Sparkle framework for auto-updates
 - Combine for reactive state management
-- SMAppService for login item management (macOS 13+)
 
 ## Build & Run Commands
 
-### Development Build
 ```bash
+# Development build
 swift build
 .build/debug/AudioRemote
-```
 
-### Release Build
-```bash
+# Release build
 swift build -c release
 .build/release/AudioRemote
-```
 
-### Build with Xcode
-```bash
-open Package.swift
-# Then press ⌘R to build and run
-```
-
-## Automated Build & Release Pipeline
-
-**IMPORTANT**: This project uses a fully automated local release script that handles version management, building, testing, and publishing to GitHub with Sparkle auto-update support.
-
-### Release Script: `release.sh`
-
-The project includes a comprehensive automated release script that handles the entire release process:
-
-```bash
-./release.sh
-```
-
-**What it does:**
-1. ✅ Pre-flight checks (gh CLI, git status, uncommitted changes)
-2. ✅ Version management (prompts for new version, validates semantic versioning)
-3. ✅ Auto-increments build number
-4. ✅ Collects release notes interactively
-5. ✅ Updates Info.plist with new version
-6. ✅ Builds app bundle with `build_app_bundle.sh`
-7. ✅ Tests app bundle (verifies all required files)
-8. ✅ Creates ZIP archive
-9. ✅ Updates appcast.xml with file size and release notes
-10. ✅ Git commit, tag, and push
-11. ✅ Creates GitHub Release with ZIP attachment
-12. ✅ Provides verification URLs
-
-**For AI Agents**: See `RELEASE_GUIDE.md` for detailed step-by-step instructions.
-
-### Quick Release
-
-```bash
-./release.sh
-```
-
-Follow the prompts:
-- Enter new version (e.g., `2.2.0`)
-- Enter release notes (one per line, empty line to finish)
-- Script handles everything else automatically
-
-### Build Script: `build_app_bundle.sh`
-
-Builds a complete app bundle with all resources:
-
-```bash
+# Build app bundle
 ./build_app_bundle.sh
+
+# Open in Xcode
+open Package.swift
 ```
 
-**Creates:**
-- `.build/release/AudioRemote.app` - Complete app bundle
-- Binary in `Contents/MacOS/`
-- Info.plist, AppIcon.icns in `Contents/Resources/`
-- Sparkle.framework in `Contents/Frameworks/`
+## Testing HTTP Server
 
-### GitHub Actions Workflow
-
-**Release Workflow** (`.github/workflows/release.yml`)
-- **Trigger**: Git tags matching `v*.*.*` (created by `release.sh`)
-- **Purpose**: Automated CI build (backup to local release)
-- **Actions**: Build, create DMG/ZIP, create GitHub Release
-
-**Note**: The local `release.sh` script is the primary release method. GitHub Actions serves as a backup CI pipeline.
-
-### Version Numbering Convention
-
-Follow Semantic Versioning (SemVer):
-- **Major (X.0.0)**: Breaking changes, major rewrites
-- **Minor (x.X.0)**: New features, backwards compatible
-- **Patch (x.x.X)**: Bug fixes, minor improvements
-
-Examples:
-- `v2.0.0`: Swift rewrite (breaking change from Python version)
-- `v2.1.0`: Added output volume control (new feature)
-- `v2.1.1`: Fixed HTTP server crash (bug fix)
-
-Build numbers auto-increment with each release.
-
-### Release Notes Guidelines
-
-Good release notes:
-- ✅ `✨ New: Feature description`
-- ✅ `🔧 Fix: Bug fix description`
-- ✅ `🎯 Enhanced: Improvement description`
-
-Bad release notes:
-- ❌ Technical jargon (refactored AudioManager.swift)
-- ❌ Internal details (updated dependencies)
-- ❌ Vague descriptions (various improvements)
-
-### Sparkle Auto-Update
-
-The release script automatically updates `appcast.xml` which powers Sparkle auto-updates:
-- Users with existing installations receive update notifications
-- Sparkle downloads ZIP from GitHub Release
-- Updates install automatically with user approval
-
-**Appcast URL**: `https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml`
-
-### Testing Releases
-
-After running `release.sh`:
-
-1. **Verify GitHub Release**:
-   ```bash
-   # URL provided by script
-   open https://github.com/leolionart/Mac-Audio-Remote/releases/tag/vX.X.X
-   ```
-
-2. **Test Download and Install**:
-   - Download ZIP from GitHub Release
-   - Extract and move to Applications
-   - Launch and verify functionality
-
-3. **Test Sparkle Auto-Update**:
-   - Launch previous version
-   - Wait for update notification (or check manually)
-   - Verify update downloads and installs correctly
-
-### Emergency Rollback
-
-If a release has critical issues:
-
-```bash
-# Delete GitHub release
-gh release delete vX.X.X --yes
-
-# Remove git tag
-git tag -d vX.X.X
-git push origin :refs/tags/vX.X.X
-
-# Revert appcast.xml
-git revert HEAD
-git push origin main
-```
-
-This prevents new downloads and stops auto-updates.
-
-### Testing HTTP Server
 ```bash
 # Microphone control
 curl -X POST http://localhost:8765/toggle-mic
@@ -179,130 +42,89 @@ curl http://localhost:8765/status
 curl -X POST http://localhost:8765/volume/increase
 curl -X POST http://localhost:8765/volume/decrease
 curl -X POST http://localhost:8765/volume/toggle-mute
-curl http://localhost:8765/volume/status
 
-# Set specific volume
-curl -X POST http://localhost:8765/volume/set \
-  -H "Content-Type: application/json" \
-  -d '{"volume": 0.5}'
+# Set specific volume (0.0-1.0)
+curl -X POST http://localhost:8765/volume/set -H "Content-Type: application/json" -d '{"volume": 0.5}'
 
-# Open web UI
+# Web UI
 open http://localhost:8765
 ```
+
+## Release Process
+
+Run the automated release script:
+```bash
+./release.sh
+```
+
+This handles: version bump, build, signing, appcast.xml update, git tag, and GitHub Release.
+
+For manual steps, see `RELEASE_GUIDE.md`.
 
 ## Architecture
 
 ### Core Components
 
-**AudioManager** (`AudioRemote/Core/AudioManager.swift`)
-- Direct Core Audio API integration using `AudioObjectPropertyAddress`
-- Controls both input (microphone) and output (speaker) devices
-- Input device via `kAudioHardwarePropertyDefaultInputDevice` with scope `kAudioDevicePropertyScopeInput`
-- Output device via `kAudioHardwarePropertyDefaultOutputDevice` with scope `kAudioDevicePropertyScopeOutput`
-- Event-driven volume change detection using `AudioObjectPropertyListenerProc` for both devices
-- Published properties for reactivity: `isMuted`, `currentVolume` (input), `outputVolume`, `isOutputMuted`
-- Volume is scalar 0.0-1.0 (0.0 = muted, 1.0 = full volume)
-- Methods: `toggle()`, `getVolume()`, `setVolume()`, `getOutputVolume()`, `setOutputVolume()`, `increaseOutputVolume()`, `decreaseOutputVolume()`, `toggleOutputMute()`
-
-**HTTPServer** (`AudioRemote/Core/HTTPServer.swift`)
-- Vapor-based async HTTP server
-- Microphone routes: `POST /toggle-mic`, `GET /status`
-- Volume routes: `POST /volume/increase`, `POST /volume/decrease`, `POST /volume/set`, `POST /volume/toggle-mute`, `GET /volume/status`
-- Web UI: `GET /` (interactive HTML interface)
-- Runs on background Task (Swift concurrency)
-- Port availability check before starting
-- CORS middleware for web access
-- Weak references to managers to prevent retain cycles
-- Response models: `ToggleResponse`, `StatusResponse`, `VolumeResponse`
-
-**SettingsManager** (`AudioRemote/Core/SettingsManager.swift`)
-- UserDefaults-based persistence (key: `app.settings.v2`)
-- Auto-migrates from legacy Python app settings (`~/.config/mic-toggle-server/settings.json`)
-- ObservableObject for SwiftUI binding
-- Settings: autoStart, notificationsEnabled, httpServerEnabled, httpPort, requestCount
-
-**AppDelegate** (`AudioRemote/App/AppDelegate.swift`)
-- App lifecycle coordinator
-- Initializes all managers in proper order
-- Sets activation policy to `.accessory` (menu bar only, no dock icon)
-- Observes settings changes to restart/stop HTTP server
-- Error handling for server startup failures
-
-**MenuBarController** (`AudioRemote/UI/MenuBarController.swift`)
-- NSStatusItem-based menu bar icon
-- Updates icon based on mute state (mic vs mic.slash)
-- Global keyboard shortcut (⌘M) for toggle
-- Opens settings window on demand
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| AudioManager | `Core/AudioManager.swift` | Core Audio API for volume/mute control with property listeners |
+| HTTPServer | `Core/HTTPServer.swift` | Vapor-based async HTTP server with REST endpoints |
+| SettingsManager | `Core/SettingsManager.swift` | UserDefaults persistence, legacy migration |
+| UpdateManager | `Core/UpdateManager.swift` | Sparkle auto-update integration |
+| MenuBarController | `UI/MenuBarController.swift` | NSStatusItem, NSPopover, icon updates |
+| GlobalHotkeyManager | `Core/GlobalHotkeyManager.swift` | System-wide keyboard shortcuts |
+| AppDelegate | `App/AppDelegate.swift` | App lifecycle, manager initialization |
 
 ### App Initialization Flow
 
-1. `MicToggleApp` → `AppDelegate.applicationDidFinishLaunching`
-2. Set activation policy to `.accessory` (hide dock icon)
-3. Initialize `AudioManager` (sets up Core Audio listeners)
-4. Initialize `SettingsManager` (loads UserDefaults, migrates legacy settings)
-5. Request notification authorization
-6. Initialize `MenuBarController` (creates status item)
-7. Initialize `HTTPServer` (but don't start yet)
-8. Start HTTP server if `httpServerEnabled == true`
-9. Set up Combine publisher to observe settings changes
+1. `AudioRemoteApp` → `AppDelegate.applicationDidFinishLaunching`
+2. `NSApp.setActivationPolicy(.accessory)` (hide dock icon)
+3. Initialize managers: AudioManager → SettingsManager → UpdateManager → MenuBarController → HTTPServer
+4. Start HTTP server if enabled in settings
+5. Set up Combine publishers for reactive updates
 
-### State Management Pattern
+### State Management
 
 - All managers are `ObservableObject` with `@Published` properties
-- UI components (SwiftUI) bind directly to published properties
-- Changes propagate automatically via Combine
-- Weak references prevent retain cycles in closures
-
-### HTTP Server Architecture
-
-- Vapor runs in background Task (Swift concurrency)
-- Server binds to `0.0.0.0` for network access
-- Toggle endpoint increments request count and shows notification
-- NetworkService provides local IP detection for webhook URLs
-
-## Important Implementation Details
+- UI binds directly to published properties via Combine
+- `AudioManager.isMuted` drives menu bar icon updates
+- Weak references in closures prevent retain cycles
 
 ### Core Audio Integration
-- Default input and output devices are queried once at startup via `kAudioHardwarePropertyDefaultInputDevice` and `kAudioHardwarePropertyDefaultOutputDevice`
-- Volume changes from external sources (System Settings, other apps) are detected via property listeners for both devices
-- Property listeners use `Unmanaged` to safely pass Swift object reference to C callbacks
-- Separate listeners for input (`inputListenerAdded`) and output (`outputListenerAdded`)
-- All listeners must be removed in `deinit` to prevent memory leaks
-- Output volume control uses same Core Audio API but with `kAudioDevicePropertyScopeOutput` scope
 
-### Settings Migration
-- On first launch, checks for `~/.config/mic-toggle-server/settings.json` (Python app)
-- Migrates: `auto_start`, `notifications`, `remote_access`, `request_count`
-- Sets `migrated_from_python` flag in UserDefaults to prevent re-migration
-- Migration happens automatically before first `save()` call
+- Default devices queried via `kAudioHardwarePropertyDefaultInputDevice` / `kAudioHardwarePropertyDefaultOutputDevice`
+- Volume control via `kAudioDevicePropertyVolumeScalar` (Float32 0.0-1.0)
+- Scope matters: `kAudioDevicePropertyScopeInput` for mic, `kAudioDevicePropertyScopeOutput` for speakers
+- Property listeners detect external changes (System Settings, other apps)
+- Listeners use `Unmanaged` to pass Swift object to C callbacks - must remove in `deinit`
 
-### Menu Bar Status Item
-- Icon updates are driven by `AudioManager.isMuted` published property
-- SF Symbols used: `mic` (unmuted) and `mic.slash` (muted)
-- Menu rebuilds on each click to show current state
+### HTTP Server Routes
 
-### Error Handling
-- HTTP server port conflicts show alert dialog and disable server in settings
-- Core Audio errors print to console but don't crash app
-- Unmanaged pointer operations in audio listener are wrapped in guard statements
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/toggle-mic` | Toggle microphone mute |
+| GET | `/status` | Get mic status |
+| POST | `/volume/increase` | Increase speaker volume |
+| POST | `/volume/decrease` | Decrease speaker volume |
+| POST | `/volume/set` | Set volume (JSON: `{"volume": 0.5}`) |
+| POST | `/volume/toggle-mute` | Toggle speaker mute |
+| GET | `/volume/status` | Get volume status |
+| GET | `/` | Web UI |
 
 ## Key Files
 
-- `Package.swift` - SPM manifest (Vapor dependency)
-- `Package.resolved` - Locked dependency versions
-- `ExportOptions.plist` - App export configuration for xcodebuild
-- `MicToggle/App/MicToggleApp.swift` - SwiftUI app entry point
-- `MicToggle/App/AppDelegate.swift` - NSApplicationDelegate lifecycle
-- `MicToggle/Resources/Assets.xcassets/` - App icons
+- `Package.swift` - SPM manifest (Vapor, Sparkle dependencies)
+- `appcast.xml` - Sparkle update feed
+- `build_app_bundle.sh` - Creates .app bundle from SPM build
+- `release.sh` - Automated release pipeline
 
 ## Dependencies
 
-- **Vapor 4.89.0+**: Full-featured web framework
-  - Includes NIO (async I/O), routing, middleware
-  - Heavy dependency but provides robust HTTP server
+- **Vapor 4.89.0+**: Async HTTP server with NIO
+- **Sparkle 2.6.0+**: Auto-update framework with EdDSA signing
 
 ## macOS Requirements
 
-- **Minimum**: macOS 13.0 (Ventura) for SMAppService
-- **Microphone Permission**: Must be granted in System Settings → Privacy & Security
-- **Gatekeeper**: Unsigned app requires `xattr -cr` to run
+- **Minimum**: macOS 13.0 (Ventura)
+- **Permissions**: Microphone access, Accessibility (for global hotkeys)
+- **Unsigned app**: Run `xattr -cr /path/to/AudioRemote.app`

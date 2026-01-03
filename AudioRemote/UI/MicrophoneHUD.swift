@@ -13,9 +13,10 @@ class MicrophoneHUDWindow: NSWindow {
 
         self.isOpaque = false
         self.backgroundColor = .clear
-        self.level = .statusBar  // Changed from .floating to .statusBar for better visibility
+        // Use extremely high window level to ensure visibility above everything
+        self.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
         self.ignoresMouseEvents = true
-        self.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
     }
 }
 
@@ -51,8 +52,9 @@ class MicrophoneHUDController: ObservableObject {
 
     private init() {}
 
+    @MainActor
     func show(isMuted: Bool) {
-        print("🎤 MicrophoneHUD: Showing HUD - isMuted: \(isMuted)")
+        NSLog("🎤 MicrophoneHUD: Showing HUD - isMuted: \(isMuted)")
 
         // Cancel any existing hide task
         hideTask?.cancel()
@@ -60,7 +62,7 @@ class MicrophoneHUDController: ObservableObject {
         // Create or update window
         if window == nil {
             window = MicrophoneHUDWindow()
-            print("🎤 MicrophoneHUD: Created new window")
+            NSLog("🎤 MicrophoneHUD: Created new window")
         }
 
         let contentView = MicrophoneHUDView(isMuted: isMuted)
@@ -72,7 +74,7 @@ class MicrophoneHUDController: ObservableObject {
         let fittingSize = hostingView.fittingSize
         window?.setContentSize(fittingSize)
 
-        print("🎤 MicrophoneHUD: Window size: \(fittingSize)")
+        NSLog("🎤 MicrophoneHUD: Window size: \(fittingSize)")
 
         // Re-center window after sizing
         if let screen = NSScreen.main, let window = window {
@@ -80,14 +82,14 @@ class MicrophoneHUDController: ObservableObject {
             let x = (screenFrame.width - fittingSize.width) / 2
             let y = (screenFrame.height - fittingSize.height) / 2 + 100
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            print("🎤 MicrophoneHUD: Window position: (\(x), \(y)), screen: \(screenFrame)")
+            NSLog("🎤 MicrophoneHUD: Window position: (\(x), \(y)), screen: \(screenFrame)")
         }
 
         // Show window with fade in - use orderFrontRegardless instead of makeKeyAndOrderFront
         window?.alphaValue = 0
         window?.orderFrontRegardless()  // Don't steal focus, just show above everything
 
-        print("🎤 MicrophoneHUD: Window ordered front")
+        NSLog("🎤 MicrophoneHUD: Window ordered front, isVisible: \(window?.isVisible ?? false), level: \(window?.level.rawValue ?? 0)")
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
@@ -101,6 +103,7 @@ class MicrophoneHUDController: ObservableObject {
         }
     }
 
+    @MainActor
     func hide() {
         hideTask?.cancel()
 

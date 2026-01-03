@@ -13,9 +13,10 @@ class VolumeHUDWindow: NSWindow {
 
         self.isOpaque = false
         self.backgroundColor = .clear
-        self.level = .statusBar  // Changed from .floating to .statusBar for better visibility
+        // Use extremely high window level to ensure visibility above everything
+        self.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.maximumWindow)))
         self.ignoresMouseEvents = true
-        self.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
     }
 }
 
