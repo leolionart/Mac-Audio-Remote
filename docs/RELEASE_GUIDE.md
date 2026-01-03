@@ -19,7 +19,7 @@ Before starting a release, ensure:
 Simply run the automated release script:
 
 ```bash
-./release.sh
+./scripts/release.sh
 ```
 
 The script will guide you through:
@@ -51,7 +51,7 @@ Edit `AudioRemote/Resources/Info.plist`:
 #### 2. Build App
 
 ```bash
-./build_app_bundle.sh
+./scripts/build_app_bundle.sh
 ```
 
 Verify the app bundle:
@@ -148,8 +148,8 @@ See full documentation at https://github.com/leolionart/Mac-Audio-Remote"
 
 ```
 mac-audio-remote/
-├── release.sh                  # Automated release script
-├── build_app_bundle.sh         # App bundle builder
+├── scripts/release.sh                  # Automated release script
+├── scripts/build_app_bundle.sh         # App bundle builder
 ├── appcast.xml                 # Sparkle update feed
 ├── AudioRemote/
 │   └── Resources/
@@ -203,7 +203,7 @@ gh auth login
 ```bash
 # Clean build directory
 rm -rf .build
-./build_app_bundle.sh
+./scripts/build_app_bundle.sh
 ```
 
 ### Icon not showing
@@ -250,7 +250,7 @@ When asked to create a release:
 
 1. **Ask for version number** if not provided
 2. **Ask for release notes** if not clear from recent commits
-3. **Run `./release.sh`** and follow the prompts
+3. **Run `./scripts/release.sh`** and follow the prompts
 4. **Verify success** by checking:
    - GitHub Release exists
    - ZIP file is attached
@@ -268,7 +268,7 @@ AI: "I'll create a release with the recent bug fixes.
 User: "2.1.2"
 
 AI: "Creating release v2.1.2 with bug fixes..."
-    [runs ./release.sh]
+    [runs ./scripts/release.sh]
     "✅ Release v2.1.2 complete!
      URL: https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v2.1.2
      Existing users will receive the update automatically via Sparkle."

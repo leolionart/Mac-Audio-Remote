@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-**ALWAYS use the local `release.sh` script for releases**. Never rely on GitHub Actions workflow alone, as it doesn't sign the ZIP file with EdDSA.
+**ALWAYS use the local `scripts/release.sh` script for releases**. Never rely on GitHub Actions workflow alone, as it doesn't sign the ZIP file with EdDSA.
 
 ## Why This Matters
 
@@ -23,7 +23,7 @@ When a user checks for updates:
 
 ## Current Problem
 
-- ✅ Local `release.sh` script: Creates ZIP + signs with EdDSA
+- ✅ Local `scripts/release.sh` script: Creates ZIP + signs with EdDSA
 - ❌ GitHub Actions workflow (`.github/workflows/release.yml`): Creates ZIP but **DOES NOT sign**
 
 If GitHub Actions workflow runs automatically on tag push, it will:
@@ -40,7 +40,7 @@ Result: Users get "Update Error! The update is improperly signed"
 
 ```bash
 cd /path/to/Mac-Audio-Remote
-bash release.sh
+bash scripts/release.sh
 ```
 
 This script will:
@@ -143,7 +143,7 @@ To properly fix this, we need to add EdDSA signing to GitHub Actions workflow:
        rm /tmp/ed25519_private_key
    ```
 
-**But until this is implemented, ALWAYS use `release.sh` locally!**
+**But until this is implemented, ALWAYS use `scripts/release.sh` locally!**
 
 ## Checklist
 
@@ -152,7 +152,7 @@ Before every release:
 - [ ] All changes committed and pushed
 - [ ] Tests passing
 - [ ] Version bumped in code (if manual)
-- [ ] Run `bash release.sh`
+- [ ] Run `bash scripts/release.sh`
 - [ ] Enter version number when prompted
 - [ ] Enter release notes
 - [ ] Wait for script to complete
@@ -169,7 +169,7 @@ Before every release:
 
 **Fix**:
 1. Re-upload signed ZIP from local (see "If GitHub Actions Overwrites the ZIP" above)
-2. Or re-run `release.sh` and let it upload the signed ZIP
+2. Or re-run `scripts/release.sh` and let it upload the signed ZIP
 
 ### "You're up to date" when new version exists
 

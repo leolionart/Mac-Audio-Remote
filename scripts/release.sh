@@ -121,7 +121,9 @@ echo ""
 # ============================================================================
 echo -e "${BLUE}[5/9] 🔨 Building app...${NC}"
 
-./build_app_bundle.sh
+# Get script directory and run build script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/build_app_bundle.sh"
 
 if [ ! -d ".build/release/AudioRemote.app" ]; then
     echo -e "${RED}❌ Build failed - app bundle not found${NC}"

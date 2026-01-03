@@ -25,7 +25,7 @@ swift build -c release
 .build/release/AudioRemote
 
 # Build app bundle
-./build_app_bundle.sh
+./scripts/build_app_bundle.sh
 
 # Open in Xcode
 open Package.swift
@@ -54,7 +54,7 @@ open http://localhost:8765
 
 Run the automated release script:
 ```bash
-./release.sh
+./scripts/release.sh
 ```
 
 This handles: version bump, build, signing, appcast.xml update, git tag, and GitHub Release.
@@ -116,8 +116,16 @@ For manual steps, see `docs/RELEASE_GUIDE.md`.
 
 - `Package.swift` - SPM manifest (Vapor, Sparkle dependencies)
 - `appcast.xml` - Sparkle update feed
-- `build_app_bundle.sh` - Creates .app bundle from SPM build
-- `release.sh` - Automated release pipeline
+
+## Scripts
+
+All build and release scripts are in `scripts/`:
+
+| Script | Description |
+|--------|-------------|
+| `scripts/build_app_bundle.sh` | Creates .app bundle from SPM build |
+| `scripts/release.sh` | Automated release pipeline |
+| `scripts/test_local.sh` | Local testing utilities |
 
 ## Documentation
 
