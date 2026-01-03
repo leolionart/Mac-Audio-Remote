@@ -13,7 +13,7 @@ class VolumeHUDWindow: NSWindow {
 
         self.isOpaque = false
         self.backgroundColor = .clear
-        self.level = .floating
+        self.level = .statusBar  // Changed from .floating to .statusBar for better visibility
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
     }
@@ -104,9 +104,9 @@ class VolumeHUDController: ObservableObject {
             window.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
-        // Show window with fade in
+        // Show window with fade in - use orderFrontRegardless instead of makeKeyAndOrderFront
         window?.alphaValue = 0
-        window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()  // Don't steal focus, just show above everything
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
