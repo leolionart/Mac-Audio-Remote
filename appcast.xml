@@ -6,6 +6,25 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.3.0</title>
+        <description><![CDATA[
+                <h2>Version 2.3.0</h2>
+                <ul>
+                    <li>🎨 Enhanced: Improved settings UI with ThemeColors system</li>
+                    <li>🔧 Fix: Combined mic toggle button with status indicator</li>
+                    <li>✨ New: SF Symbols replacing emoji for dark mode support</li>
+                </ul>
+        ]]></description>
+        <pubDate>Sat, 03 Jan 2026 07:17:02 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.3.0/AudioRemote-2.3.0.zip"
+                   sparkle:version="2.3.0"
+                   sparkle:shortVersionString="2.3.0"
+                   sparkle:edSignature="4rua6mJPcWeJbuFcl+M4ZNjVPjRdTFp54FejoQRIPlTnvzjFzHWpkTLik8KpvSOB051c92Rfth/t49suDTzeCg=="
+                   length="14379535"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.8</title>
         <description><![CDATA[
                 <h2>Version 2.2.8</h2>
