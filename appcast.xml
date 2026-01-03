@@ -6,6 +6,29 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.8</title>
+        <description><![CDATA[
+                <h2>Version 2.2.8</h2>
+                <ul>
+                    <li>🔧 Fix: MicrophoneHUD now properly displays above all windows</li>
+                    <li>🔧 Fix: Changed window level to .statusBar for better visibility</li>
+                    <li>🔧 Fix: Use orderFrontRegardless() to show HUD without stealing focus</li>
+                    <li>🎨 Enhanced: Synced MicrophoneHUD style with VolumeHUD (black transparent)</li>
+                    <li>⚡ Enhanced: Increased HUD display time to 2.5 seconds</li>
+                    <li>🐛 Enhanced: Added debug logging for troubleshooting</li>
+                    <li>✨ Enhanced: Auto-sizing window based on content</li>
+                </ul>
+        ]]></description>
+        <pubDate>Fri, 03 Jan 2026 04:04:00 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.8/AudioRemote-2.2.8.zip"
+                   sparkle:version="16"
+                   sparkle:shortVersionString="2.2.8"
+                   sparkle:edSignature="ZY+yWeQt2v9Z1fIko8juyfAWodqxClerXwvq08VKtGRloHZ37sPIZ2EohhtY/NOHaY0g8ZJtjjiEEfGBxNmLBw=="
+                   length="14380216"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.7</title>
         <description><![CDATA[
                 <h2>Version 2.2.7</h2>
