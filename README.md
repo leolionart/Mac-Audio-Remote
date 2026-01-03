@@ -16,6 +16,8 @@ Native macOS menu bar app for controlling microphone and speaker audio from your
 - 🔔 Smart notifications
 - 🚀 Auto-start at login
 
+![Audio Remote Demo](https://cdn-std.droplr.net/files/acc_692205/Mixpfi)
+
 ## Installation
 
 1. Download `AudioRemote.dmg` from [Releases](https://github.com/leolionart/Mac-Audio-Remote/releases)
