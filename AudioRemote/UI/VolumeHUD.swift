@@ -3,8 +3,9 @@ import AppKit
 
 class VolumeHUDWindow: NSWindow {
     init() {
+        // Start with minimal size - will be auto-sized by content
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -15,14 +16,6 @@ class VolumeHUDWindow: NSWindow {
         self.level = .floating
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
-
-        // Center on screen
-        if let screen = NSScreen.main {
-            let screenFrame = screen.frame
-            let x = (screenFrame.width - 200) / 2
-            let y = (screenFrame.height - 100) / 2 + 100 // Slightly above center
-            self.setFrameOrigin(NSPoint(x: x, y: y))
-        }
     }
 }
 
@@ -95,7 +88,21 @@ class VolumeHUDController: ObservableObject {
             isMuted: isMuted,
             icon: isMuted ? "speaker.slash.fill" : icon
         )
-        window?.contentView = NSHostingView(rootView: contentView)
+        let hostingView = NSHostingView(rootView: contentView)
+        window?.contentView = hostingView
+
+        // Auto-size window to fit content
+        hostingView.invalidateIntrinsicContentSize()
+        let fittingSize = hostingView.fittingSize
+        window?.setContentSize(fittingSize)
+
+        // Re-center window after sizing
+        if let screen = NSScreen.main, let window = window {
+            let screenFrame = screen.frame
+            let x = (screenFrame.width - fittingSize.width) / 2
+            let y = (screenFrame.height - fittingSize.height) / 2 + 100
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        }
 
         // Show window with fade in
         window?.alphaValue = 0

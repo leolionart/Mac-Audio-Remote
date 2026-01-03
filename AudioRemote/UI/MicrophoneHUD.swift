@@ -3,8 +3,9 @@ import AppKit
 
 class MicrophoneHUDWindow: NSWindow {
     init() {
+        // Start with minimal size - will be auto-sized by content
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -15,14 +16,6 @@ class MicrophoneHUDWindow: NSWindow {
         self.level = .floating
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
-
-        // Center on screen
-        if let screen = NSScreen.main {
-            let screenFrame = screen.frame
-            let x = (screenFrame.width - 200) / 2
-            let y = (screenFrame.height - 100) / 2 + 100 // Slightly above center
-            self.setFrameOrigin(NSPoint(x: x, y: y))
-        }
     }
 }
 
@@ -33,15 +26,15 @@ struct MicrophoneHUDView: View {
         VStack(spacing: 12) {
             // Icon
             Image(systemName: isMuted ? "mic.slash.fill" : "mic.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 32))
                 .foregroundColor(.white)
 
             // Status text
             Text(isMuted ? "Mic Muted" : "Mic Active")
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
         }
-        .padding(24)
+        .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.75))
@@ -68,7 +61,21 @@ class MicrophoneHUDController: ObservableObject {
         }
 
         let contentView = MicrophoneHUDView(isMuted: isMuted)
-        window?.contentView = NSHostingView(rootView: contentView)
+        let hostingView = NSHostingView(rootView: contentView)
+        window?.contentView = hostingView
+
+        // Auto-size window to fit content
+        hostingView.invalidateIntrinsicContentSize()
+        let fittingSize = hostingView.fittingSize
+        window?.setContentSize(fittingSize)
+
+        // Re-center window after sizing
+        if let screen = NSScreen.main, let window = window {
+            let screenFrame = screen.frame
+            let x = (screenFrame.width - fittingSize.width) / 2
+            let y = (screenFrame.height - fittingSize.height) / 2 + 100
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        }
 
         // Show window with fade in
         window?.alphaValue = 0
