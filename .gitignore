@@ -43,3 +43,4 @@ dist/
 
 # Release builds (keep locally)
 releases/
+bin/
