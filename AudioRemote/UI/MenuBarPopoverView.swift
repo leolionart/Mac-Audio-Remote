@@ -25,11 +25,16 @@ struct MenuBarPopoverView: View {
                 isMuted: audioManager.isMuted,
                 volume: audioManager.currentVolume,
                 toggleMic: {
-                    let _ = audioManager.toggle()
+                    let muted = audioManager.toggle()
                     settingsManager.incrementRequestCount()
+
+                    // Show HUD overlay
+                    MicrophoneHUDController.shared.show(isMuted: muted)
+
+                    // Show notification if enabled
                     if settingsManager.settings.notificationsEnabled {
                         NotificationService.shared.showMicToggle(
-                            isMuted: audioManager.isMuted,
+                            isMuted: muted,
                             source: "Menu Bar"
                         )
                     }

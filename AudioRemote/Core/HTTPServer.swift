@@ -91,6 +91,11 @@ class HTTPServer {
             let muted = self.audioManager.toggle()
             self.settingsManager.incrementRequestCount()
 
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                MicrophoneHUDController.shared.show(isMuted: muted)
+            }
+
             // Show notification if enabled
             if self.settingsManager.settings.notificationsEnabled {
                 NotificationService.shared.showMicToggle(isMuted: muted, source: "Remote")
