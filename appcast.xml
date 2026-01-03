@@ -6,6 +6,27 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.7</title>
+        <description><![CDATA[
+                <h2>Version 2.2.7</h2>
+                <ul>
+                    <li>✨ New: Microphone toggle HUD overlay with visual feedback</li>
+                    <li>🎨 Enhanced: Auto-sizing HUD window based on content</li>
+                    <li>🔧 Enhanced: Consistent styling across all HUD overlays</li>
+                    <li>🎯 Enhanced: Shows mic status when toggling from webhook or menu bar</li>
+                    <li>⚡ Fixed: Toggle returns correct mute state immediately</li>
+                </ul>
+        ]]></description>
+        <pubDate>Sat, 03 Jan 2026 02:09:00 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.7/AudioRemote-2.2.7.zip"
+                   sparkle:version="15"
+                   sparkle:shortVersionString="2.2.7"
+                   sparkle:edSignature="17EOY7R8hrGeDDncLQA3Dgz1dWWfohN2EJEZDUfMqJNaosdapNfr6+KflUkkg28fj9mywAaxp0mQETiG4QiRCw=="
+                   length="14379378"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.6</title>
         <description><![CDATA[
                 <h2>Version 2.2.6</h2>
