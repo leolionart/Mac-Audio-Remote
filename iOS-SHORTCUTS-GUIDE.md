@@ -7,10 +7,10 @@
 Scan QR codes hoặc mở links sau trên iPhone:
 
 **Microphone Control:**
-- Bật/Tắt mic: [Import Shortcut](shortcuts://import-shortcut?url=https://www.icloud.com/shortcuts/8adc8922db474542b3e816c7d91d9180)
+- Bật/Tắt mic: [Import Shortcut](https://www.icloud.com/shortcuts/8adc8922db474542b3e816c7d91d9180)
 
 **Volume Control:**
-- Đồng bộ với âm lượng điện thoại: [Import Shortcut](shortcuts://import-shortcut?url=https://www.icloud.com/shortcuts/f735da7cd2624e33983a70ae99109053)
+- Đồng bộ với âm lượng điện thoại: [Import Shortcut](https://www.icloud.com/shortcuts/f735da7cd2624e33983a70ae99109053)
 
 ### Cách 2: Manual Setup (Step-by-step)
 
