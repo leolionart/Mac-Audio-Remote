@@ -59,7 +59,7 @@ Run the automated release script:
 
 This handles: version bump, build, signing, appcast.xml update, git tag, and GitHub Release.
 
-For manual steps, see `RELEASE_GUIDE.md`.
+For manual steps, see `docs/RELEASE_GUIDE.md`.
 
 ## Architecture
 
@@ -107,6 +107,7 @@ For manual steps, see `RELEASE_GUIDE.md`.
 | POST | `/volume/increase` | Increase speaker volume |
 | POST | `/volume/decrease` | Decrease speaker volume |
 | POST | `/volume/set` | Set volume (JSON: `{"volume": 0.5}`) |
+| POST | `/volume/percent/:value` | Set volume by path (0.0-1.0) |
 | POST | `/volume/toggle-mute` | Toggle speaker mute |
 | GET | `/volume/status` | Get volume status |
 | GET | `/` | Web UI |
@@ -117,6 +118,17 @@ For manual steps, see `RELEASE_GUIDE.md`.
 - `appcast.xml` - Sparkle update feed
 - `build_app_bundle.sh` - Creates .app bundle from SPM build
 - `release.sh` - Automated release pipeline
+
+## Documentation
+
+All detailed documentation is in `docs/`:
+
+| File | Description |
+|------|-------------|
+| `docs/RELEASE_GUIDE.md` | Step-by-step release instructions for AI agents |
+| `docs/RELEASE_PROCESS.md` | Release workflow and versioning |
+| `docs/UPDATE_GUIDE.md` | Sparkle auto-update troubleshooting |
+| `docs/iOS-SHORTCUTS-GUIDE.md` | iOS Shortcuts setup guide (Vietnamese) |
 
 ## Dependencies
 
