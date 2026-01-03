@@ -40,6 +40,7 @@ struct SettingsView: View {
                 // Stats Grid
                 StatsGrid(
                     audioManager: audioManager,
+                    settingsManager: settingsManager,
                     requestCount: settingsManager.settings.requestCount,
                     port: settingsManager.settings.httpPort,
                     uptime: uptimeString
@@ -49,9 +50,7 @@ struct SettingsView: View {
                 // Webhook URLs Section
                 WebhookSection(
                     localIP: localIP,
-                    port: settingsManager.settings.httpPort,
-                    audioManager: audioManager,
-                    settingsManager: settingsManager
+                    port: settingsManager.settings.httpPort
                 )
                 .padding(.horizontal, 24)
 
@@ -114,19 +113,28 @@ struct HeaderView: View {
     var body: some View {
         HStack {
             HStack(spacing: 16) {
-                // App Icon
-                ZStack {
-                    LinearGradient(
-                        gradient: Gradient(colors: [ThemeColors.accent, ThemeColors.accentBlue]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .frame(width: 48, height: 48)
-                    .cornerRadius(12)
+                // App Icon - Load from bundle
+                if let appIcon = NSImage(named: "AppIcon") {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 48, height: 48)
+                        .cornerRadius(12)
+                } else {
+                    // Fallback if icon not found
+                    ZStack {
+                        LinearGradient(
+                            gradient: Gradient(colors: [ThemeColors.accent, ThemeColors.accentBlue]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .frame(width: 48, height: 48)
+                        .cornerRadius(12)
 
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(.white)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -234,19 +242,15 @@ struct FeatureCard: View {
 // MARK: - Stats Grid
 struct StatsGrid: View {
     @ObservedObject var audioManager: AudioManager
+    @ObservedObject var settingsManager: SettingsManager
     let requestCount: Int
     let port: Int
     let uptime: String
 
     var body: some View {
         HStack(spacing: 16) {
-            StatCard(
-                icon: "🎙️",
-                label: "MIC STATUS",
-                value: audioManager.isMuted ? "OFF" : "ON",
-                valueColor: audioManager.isMuted ? ThemeColors.error : ThemeColors.accent,
-                subtitle: audioManager.isMuted ? "muted" : "active"
-            )
+            // Interactive Mic Toggle Card
+            MicToggleCard(audioManager: audioManager, settingsManager: settingsManager)
 
             StatCard(
                 icon: "⚡",
@@ -272,6 +276,58 @@ struct StatsGrid: View {
                 subtitle: "since start"
             )
         }
+    }
+}
+
+// MARK: - Interactive Mic Toggle Card
+struct MicToggleCard: View {
+    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var settingsManager: SettingsManager
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: {
+            let muted = audioManager.toggle()
+            settingsManager.incrementRequestCount()
+            if settingsManager.settings.notificationsEnabled {
+                NotificationService.shared.showMicToggle(isMuted: muted, source: "Settings")
+            }
+        }) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text("🎙️")
+                        .font(.system(size: 12))
+                    Text("MIC")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ThemeColors.textMuted)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
+                }
+
+                Text(audioManager.isMuted ? "OFF" : "ON")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
+
+                Text(isHovering ? "click to toggle" : (audioManager.isMuted ? "muted" : "active"))
+                    .font(.system(size: 12))
+                    .foregroundColor(isHovering ? ThemeColors.accent : ThemeColors.textMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(isHovering ? ThemeColors.cardBg.opacity(0.8) : ThemeColors.cardBg)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isHovering ? ThemeColors.accent : ThemeColors.border, lineWidth: isHovering ? 2 : 1)
+            )
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: audioManager.isMuted)
     }
 }
 
@@ -317,8 +373,6 @@ struct StatCard: View {
 struct WebhookSection: View {
     let localIP: String
     let port: Int
-    @ObservedObject var audioManager: AudioManager
-    @ObservedObject var settingsManager: SettingsManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -346,16 +400,12 @@ struct WebhookSection: View {
                 SectionDivider(title: "Volume")
                 URLDisplayRow(label: "Vol Up", url: "http://\(localIP):\(port)/volume/increase")
                 URLDisplayRow(label: "Vol Down", url: "http://\(localIP):\(port)/volume/decrease")
+                URLDisplayRow(label: "Set Vol", url: "http://\(localIP):\(port)/volume/percent/{0-1}")
                 URLDisplayRow(label: "Toggle Mute", url: "http://\(localIP):\(port)/volume/toggle-mute")
                 URLDisplayRow(label: "Vol Status", url: "http://\(localIP):\(port)/volume/status")
             }
             .padding(.horizontal, 20)
-
-            // Combined toggle button with status
-            MicToggleButton(audioManager: audioManager, settingsManager: settingsManager)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 20)
+            .padding(.bottom, 20)
         }
         .background(ThemeColors.cardBg)
         .overlay(
@@ -383,56 +433,6 @@ struct SectionDivider: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Mic Toggle Button (Combined Button + Status)
-struct MicToggleButton: View {
-    @ObservedObject var audioManager: AudioManager
-    @ObservedObject var settingsManager: SettingsManager
-
-    var body: some View {
-        Button(action: {
-            let muted = audioManager.toggle()
-            settingsManager.incrementRequestCount()
-            if settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showMicToggle(isMuted: muted, source: "Settings")
-            }
-        }) {
-            HStack(spacing: 12) {
-                // Status icon
-                Image(systemName: audioManager.isMuted ? "mic.slash.fill" : "mic.fill")
-                    .font(.system(size: 18))
-                    .foregroundColor(.white)
-
-                // Dynamic text showing current state
-                Text(audioManager.isMuted ? "Unmute Microphone" : "Mute Microphone")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-
-                Spacer()
-
-                // Status badge
-                Text(audioManager.isMuted ? "MUTED" : "ACTIVE")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        (audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
-                            .opacity(0.15)
-                    )
-                    .cornerRadius(4)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(audioManager.isMuted ? ThemeColors.error.opacity(0.8) : ThemeColors.accent.opacity(0.8))
-            )
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: audioManager.isMuted)
     }
 }
 
@@ -504,7 +504,7 @@ struct SettingsSection: View {
 
             VStack(spacing: 0) {
                 SettingRow(
-                    icon: "rocket.fill",
+                    icon: "power.circle.fill",
                     title: "Start at Login",
                     description: "Launch server when macOS starts",
                     isOn: Binding(

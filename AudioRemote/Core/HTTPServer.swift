@@ -207,6 +207,53 @@ class HTTPServer {
             )
         }
 
+        // POST /volume/percent/:value - Set volume by value (0.0-1.0)
+        // Also accepts body with "volume" field for flexibility
+        app.post("volume", "percent", ":value") { [weak self] req throws -> VolumeResponse in
+            guard let self = self else {
+                throw Abort(.internalServerError, reason: "Server not initialized")
+            }
+
+            // Log raw request for debugging
+            let rawBody = req.body.string ?? "(empty)"
+            let pathValue = req.parameters.get("value") ?? "(none)"
+            print("📊 Volume request - Path value: '\(pathValue)', Body: '\(rawBody)'")
+
+            guard let valueString = req.parameters.get("value") else {
+                throw Abort(.badRequest, reason: "Missing value parameter")
+            }
+
+            // Handle both comma (European/VN locale) and dot decimal separators
+            let normalizedString = valueString.replacingOccurrences(of: ",", with: ".")
+
+            guard let value = Float(normalizedString) else {
+                throw Abort(.badRequest, reason: "Invalid value. Use decimal 0.0-1.0. Received: '\(valueString)'")
+            }
+
+            // Clamp to valid range
+            let clampedVolume = max(0.0, min(1.0, value))
+
+            self.audioManager.setOutputVolume(clampedVolume)
+            self.settingsManager.incrementRequestCount()
+
+            // Get volume directly from Core Audio
+            let currentVolume = self.audioManager.getOutputVolume()
+
+            // Show HUD overlay on main thread (non-blocking)
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(
+                    volume: currentVolume,
+                    isMuted: (currentVolume == 0.0)
+                )
+            }
+
+            return VolumeResponse(
+                status: "ok",
+                volume: currentVolume,
+                muted: (currentVolume == 0.0)
+            )
+        }
+
         // POST /volume/toggle-mute
         app.post("volume", "toggle-mute") { [weak self] req throws -> VolumeResponse in
             guard let self = self else {
@@ -361,6 +408,10 @@ class HTTPServer {
                     <p style="margin-top: 1.5rem;"><strong>Set Volume (0.0-1.0):</strong></p>
                     <code>POST http://\(localIP):\(port)/volume/set</code>
                     <p style="font-size: 0.85rem; margin-top: 0.5rem;">Body: {"volume": 0.5}</p>
+
+                    <p style="margin-top: 1.5rem;"><strong>Set Volume by Value (0.0-1.0):</strong></p>
+                    <code>POST http://\(localIP):\(port)/volume/percent/{value}</code>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Example: /volume/percent/0.75 sets volume to 75%</p>
 
                     <p style="margin-top: 1.5rem;"><strong>Toggle Mute:</strong></p>
                     <code>POST http://\(localIP):\(port)/volume/toggle-mute</code>

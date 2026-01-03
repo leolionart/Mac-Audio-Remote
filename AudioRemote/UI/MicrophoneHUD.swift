@@ -30,17 +30,19 @@ struct MicrophoneHUDView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.white)
 
-            // Status text
+            // Status text - use fixedSize to prevent truncation
             Text(isMuted ? "Mic Muted" : "Mic Active")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
+                .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(20)
+        .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.black.opacity(0.75))
                 .shadow(color: .black.opacity(0.3), radius: 10)
         )
+        .fixedSize()  // Allow view to size to content
     }
 }
 
