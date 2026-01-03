@@ -6,6 +6,26 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.4.0</title>
+        <description><![CDATA[
+                <h2>Version 2.4.0</h2>
+                <ul>
+                    <li>✨ New: Set exact volume via /volume/percent endpoint</li>
+                    <li>🔧 Fix: Support comma decimal separator (VN/EU locale)</li>
+                    <li>🔧 Fix: HUD text no longer truncated</li>
+                    <li>🎯 Enhanced: Compact UI with mic toggle in status area</li>
+                </ul>
+        ]]></description>
+        <pubDate>Sat, 03 Jan 2026 11:06:53 +0000</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.4.0/AudioRemote-2.4.0.zip"
+                   sparkle:version="2.4.0"
+                   sparkle:shortVersionString="2.4.0"
+                   sparkle:edSignature="dxz7QEmCXwDKdgYX84ZL+dimdwpDwAszOxMhtsjwAFd8mV1Z2FTSPwovkKs/NnzrQqtVDP5B3VUb1/99LvrEDg=="
+                   length="14391964"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.3.1</title>
         <description><![CDATA[
                 <h2>Version 2.3.1</h2>
