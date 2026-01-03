@@ -3,14 +3,16 @@ import Foundation
 import Sparkle
 
 // UpdateManager - Uses Sparkle framework for auto-updates
-class UpdateManager: ObservableObject {
-    @Published var canCheckForUpdates = true
+class UpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate {
+    @Published var canCheckForUpdates = false
     @Published var lastUpdateCheckDate: Date?
+    @Published var isCheckingForUpdates = false
 
     private var updaterController: SPUStandardUpdaterController?
-    private let feedURL = "https://leolionart.github.io/Mac-Audio-Remote/appcast.xml"
 
-    init() {
+    override init() {
+        super.init()
+
         // Load last check date
         if let date = UserDefaults.standard.object(forKey: "lastUpdateCheckDate") as? Date {
             self.lastUpdateCheckDate = date
@@ -21,50 +23,81 @@ class UpdateManager: ObservableObject {
     }
 
     private func setupSparkle() {
-        // Create updater controller
+        // Create updater controller with self as delegate
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
-            updaterDelegate: nil,
+            updaterDelegate: self,
             userDriverDelegate: nil
         )
 
+        // Bind canCheckForUpdates to the updater's property
+        if let updater = updaterController?.updater {
+            canCheckForUpdates = updater.canCheckForUpdates
+
+            // Observe changes to canCheckForUpdates
+            updater.publisher(for: \.canCheckForUpdates)
+                .receive(on: DispatchQueue.main)
+                .assign(to: &$canCheckForUpdates)
+        }
+
         print("✅ Sparkle initialized successfully")
-        print("📡 Feed URL will be read from Info.plist SUFeedURL key")
+        if let feedURL = updaterController?.updater.feedURL {
+            print("📡 Feed URL: \(feedURL)")
+        }
     }
 
     func checkForUpdates() {
+        guard canCheckForUpdates else {
+            print("⚠️ Cannot check for updates right now")
+            return
+        }
+
+        isCheckingForUpdates = true
+
         // Update last check date
         lastUpdateCheckDate = Date()
         UserDefaults.standard.set(lastUpdateCheckDate, forKey: "lastUpdateCheckDate")
 
-        // Trigger Sparkle update check
+        // Trigger Sparkle update check - this will show Sparkle's UI
         updaterController?.checkForUpdates(nil)
+
+        // Reset checking state after a delay (Sparkle handles the rest)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.isCheckingForUpdates = false
+        }
     }
 
     func checkForUpdatesInBackground() {
-        // For free version, do nothing in background
-        // Only manual check by opening browser
-        print("Background update check - Free version: No action")
+        updaterController?.updater.checkForUpdatesInBackground()
     }
 
-    var automaticallyChecksForUpdates: Bool {
-        get {
-            // Always false for free version
-            return false
-        }
-        set {
-            // Ignore - not supported in free version
-            UserDefaults.standard.set(false, forKey: "automaticallyChecksForUpdates")
+    // MARK: - SPUUpdaterDelegate
+
+    func updater(_ updater: SPUUpdater, didFinishLoading appcast: SUAppcast) {
+        print("✅ Loaded appcast with \(appcast.items.count) items")
+        for item in appcast.items {
+            print("  - Version: \(item.displayVersionString ?? "unknown") (build \(item.versionString ?? "?"))")
         }
     }
 
-    var automaticallyDownloadsUpdates: Bool {
-        get {
-            return false
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: any Error) {
+        print("ℹ️ No update available: \(error.localizedDescription)")
+        DispatchQueue.main.async { [weak self] in
+            self?.isCheckingForUpdates = false
         }
-        set {
-            // Ignore - not supported in free version
-            UserDefaults.standard.set(false, forKey: "automaticallyDownloadsUpdates")
+    }
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        print("🎉 Update available: \(item.displayVersionString ?? "unknown")")
+        DispatchQueue.main.async { [weak self] in
+            self?.isCheckingForUpdates = false
+        }
+    }
+
+    func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
+        print("❌ Update aborted: \(error.localizedDescription)")
+        DispatchQueue.main.async { [weak self] in
+            self?.isCheckingForUpdates = false
         }
     }
 }
