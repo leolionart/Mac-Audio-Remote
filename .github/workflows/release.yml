@@ -172,6 +172,52 @@ jobs:
         zip -r AudioRemote-${VERSION}.zip AudioRemote.app
         echo "Created AudioRemote-${VERSION}.zip"
 
+    - name: Sign ZIP with EdDSA
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+      run: |
+        # Get version from tag
+        VERSION=${GITHUB_REF#refs/tags/v}
+        if [ -z "$VERSION" ] || [ "$VERSION" == "$GITHUB_REF" ]; then
+          VERSION="dev"
+        fi
+
+        # Download and extract Sparkle tools
+        echo "📥 Downloading Sparkle tools..."
+        curl -L -o /tmp/Sparkle.tar.xz \
+          https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
+        mkdir -p /tmp/sparkle
+        tar -xf /tmp/Sparkle.tar.xz -C /tmp/sparkle
+
+        # Create temporary private key file
+        echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private_key.txt
+
+        # Sign the ZIP file
+        echo "🔐 Signing ZIP with EdDSA..."
+        SIGNATURE_OUTPUT=$(/tmp/sparkle/bin/sign_update \
+          --ed-key-file /tmp/sparkle_private_key.txt \
+          AudioRemote-${VERSION}.zip 2>&1)
+
+        echo "Signature output: $SIGNATURE_OUTPUT"
+
+        # Extract signature for verification
+        ED_SIGNATURE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
+
+        if [ -z "$ED_SIGNATURE" ]; then
+          echo "❌ Failed to sign ZIP file"
+          echo "Output: $SIGNATURE_OUTPUT"
+          exit 1
+        fi
+
+        echo "✅ ZIP signed successfully"
+        echo "EdDSA Signature: $ED_SIGNATURE"
+
+        # Clean up private key
+        rm -f /tmp/sparkle_private_key.txt
+
+        # Save signature to output for later use
+        echo "ED_SIGNATURE=$ED_SIGNATURE" >> $GITHUB_OUTPUT
+
     - name: Get version from tag
       id: get_version
       run: |
