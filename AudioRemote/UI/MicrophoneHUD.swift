@@ -37,7 +37,7 @@ struct MicrophoneHUDView: View {
                 .foregroundColor(.white)
 
             // Status text
-            Text(isMuted ? "Microphone Muted" : "Microphone Active")
+            Text(isMuted ? "Mic Muted" : "Mic Active")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
         }
