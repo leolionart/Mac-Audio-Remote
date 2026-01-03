@@ -6,6 +6,28 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.2.5</title>
+        <description><![CDATA[
+                <h2>Version 2.2.5</h2>
+                <ul>
+                    <li>🔐 Fix: GitHub Actions now properly signs updates with EdDSA</li>
+                    <li>✅ Fix: All users can now verify and install auto-updates</li>
+                    <li>🔧 Fix: Resolved "Update Error! Improperly signed" issue</li>
+                    <li>⚡ Enhanced: Automated signing in CI/CD pipeline</li>
+                    <li>📝 Enhanced: Added comprehensive release process documentation</li>
+                    <li>🎯 Enhanced: Consistent signing between local and GitHub releases</li>
+                </ul>
+        ]]></description>
+        <pubDate>Sat, 03 Jan 2026 01:16:47 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.5/AudioRemote-2.2.5.zip"
+                   sparkle:version="2.2.5"
+                   sparkle:shortVersionString="2.2.5"
+                   sparkle:edSignature="ci0N3n+675lp/Ngvev4V1oxXdDMjtdr+1OpB3G6pRsZSoj16LjEunl2R42ym+6Drzby4AfPXN9pSHy5MF5K5CA=="
+                   length="14290482"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.2.4</title>
         <description><![CDATA[
                 <h2>Version 2.2.4</h2>
