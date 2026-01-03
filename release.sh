@@ -165,7 +165,9 @@ echo -e "${BLUE}  Signing update with EdDSA...${NC}"
 
 # Check if sign_update exists
 SIGN_UPDATE=""
-if [ -f "/tmp/bin/sign_update" ]; then
+if [ -f "../../bin/sign_update" ]; then
+    SIGN_UPDATE="../../bin/sign_update"
+elif [ -f "/tmp/bin/sign_update" ]; then
     SIGN_UPDATE="/tmp/bin/sign_update"
 elif [ -f ".build/artifacts/sparkle/Sparkle/bin/sign_update" ]; then
     SIGN_UPDATE=".build/artifacts/sparkle/Sparkle/bin/sign_update"
