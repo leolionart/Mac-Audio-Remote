@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "user-prompt-submit": "./scripts/hooks/approval_hook.sh",
+    "task-complete": "./scripts/hooks/completion_hook.sh"
+  },
+  "outputStyle": "explanatory"
+}
