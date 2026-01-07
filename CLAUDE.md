@@ -52,22 +52,19 @@ open http://localhost:8765
 
 ## Release Process
 
-**Use the `/release` skill** for releasing new versions:
+**Use the `/release` skill**:
 ```bash
-# Example: Release version 2.6.0
-/release 2.6.0
+/release <VERSION>
 ```
 
-The skill handles the complete workflow:
-1. Commit changes
-2. Bump version in Info.plist
-3. Build app bundle
-4. Create and sign ZIP
-5. Push, tag, and create GitHub Release
+This runs `./scripts/release.sh` which automatically:
+1. Bumps version in Info.plist
+2. Builds Rust FFI + Swift app
+3. Creates DMG and ZIP
+4. Commits, tags, and pushes
+5. Creates GitHub Release
 
-**IMPORTANT**: All builds happen locally. GitHub Actions release workflow is disabled to avoid signature mismatches.
-
-For manual steps, see `.claude/skills/release/SKILL.md` or `docs/RELEASE_GUIDE.md`.
+**No signing or appcast.xml needed** - app uses custom GitHub Releases integration.
 
 ## Architecture
 

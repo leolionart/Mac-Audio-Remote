@@ -1,56 +1,68 @@
 # Audio Remote - Release Guide
 
-## Overview
+## Quick Start
 
-This guide provides instructions for releasing new versions of Audio Remote. The release process is fully automated via `scripts/release.sh`, which handles version bumping, building, and publishing to GitHub Releases.
+```bash
+./scripts/release.sh <VERSION>
+```
 
-The app uses a custom update mechanism that checks GitHub Releases directly, so no `appcast.xml` or EdDSA signing is required for updates to work.
+That's it! The script handles everything automatically.
 
 ## Prerequisites
 
-- ✅ GitHub CLI (`gh`) installed and authenticated
-- ✅ All code changes committed
-- ✅ App tested locally
-- ✅ Write access to the GitHub repository
+- GitHub CLI (`gh`) installed: `brew install gh`
+- Authenticated: `gh auth login`
+- Rust installed (script will prompt if missing)
 
-## Release Process
+## What Happens
 
-### Automated Release (Recommended)
+The script automatically:
 
-Run the interactive release script:
+1. Updates version in `Info.plist`
+2. Builds Rust FFI + Swift app
+3. Creates DMG (primary) and ZIP (fallback)
+4. Commits, tags, and pushes to GitHub
+5. Creates GitHub Release with both files
 
-```bash
-./scripts/release.sh
-```
+**No signing or appcast.xml needed** - app uses custom GitHub Releases integration.
 
-The script will:
-1. Perform pre-flight checks (gh CLI, git status)
-2. Ask for new version number
-3. Collect release notes
-4. Update `Info.plist`
-5. Build the app bundle
-6. Create ZIP archive
-7. Commit and tag changes
-8. Create GitHub Release
+## Version Numbers
 
-### Manual Release Steps (Reference)
+Use semantic versioning:
+- **2.7.1** - Bug fixes (PATCH)
+- **2.8.0** - New features (MINOR)
+- **3.0.0** - Breaking changes (MAJOR)
 
-If the script fails or you need to do it manually:
+## Release Notes
 
-1.  **Update Version**: Edit `AudioRemote/Resources/Info.plist` (CFBundleShortVersionString and CFBundleVersion).
-2.  **Build**: Run `./scripts/build_app_bundle.sh`.
-3.  **Zip**: Compress `.build/release/AudioRemote.app` to `AudioRemote-X.Y.Z.zip`.
-4.  **Tag**: Git commit and tag `vX.Y.Z`.
-5.  **Release**: Create a new Release on GitHub, attach the ZIP, and publish.
+Use emoji prefixes when prompted:
+- `✨ New:` - New features
+- `🔧 Fix:` - Bug fixes
+- `🎯 Enhanced:` - Improvements
+- `🗑️ Removed:` - Removed features
 
-## Auto-Update Flow
+## How Updates Work
 
-1.  **Check**: App queries GitHub Releases API (`https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases`).
-2.  **Compare**: App compares its version with the latest release tag (e.g., `v2.2.0` vs `2.1.0`).
-3.  **Notify**: If a new version is found, user is notified.
-4.  **Download & Install**: App downloads ZIP, extracts it, and swaps the app bundle.
+1. App checks GitHub Releases API (on launch if 24+ hours since last check)
+2. Compares versions using Rust FFI
+3. Downloads DMG (preferred) or ZIP
+4. Auto-installs and relaunches
 
 ## Troubleshooting
 
--   **Build fails**: Run `swift package clean` and try again.
--   **Release script fails**: Check if `gh` is logged in (`gh auth status`).
+**Rust not installed?**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
+```
+
+**Build fails?**
+```bash
+swift package clean
+./scripts/release.sh <VERSION>
+```
+
+**Not logged into GitHub?**
+```bash
+gh auth login
+```
