@@ -229,13 +229,16 @@ class UpdateManager: NSObject, ObservableObject {
         }
 
         // Step 3: Parse mount point from output
-        // Output format: "/dev/disk4s2    Apple_HFS    /Volumes/AudioRemote"
+        // Output formats:
+        // - HFS+: "/dev/disk4s2    Apple_HFS    /Volumes/AudioRemote"
+        // - APFS: "/dev/disk9s1    41504653-0000-11AA-AA11-0030654    /Volumes/AudioRemote"
         var mountPoint: String?
         for line in attachOutput.output.components(separatedBy: "\\n") {
             if line.contains("/Volumes/") {
-                let components = line.components(separatedBy: "\\t").filter { !$0.isEmpty }
-                if let lastComponent = components.last {
-                    mountPoint = lastComponent.trimmingCharacters(in: .whitespaces)
+                // Split by tabs and spaces, find the /Volumes/ component
+                let components = line.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                if let volumeComponent = components.first(where: { $0.hasPrefix("/Volumes/") }) {
+                    mountPoint = volumeComponent
                     break
                 }
             }

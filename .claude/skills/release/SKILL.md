@@ -1,63 +1,53 @@
 ---
 name: release
 description: >-
-  Release new version of Audio Remote. Runs ./scripts/release.sh to build, package, and publish to GitHub Releases.
+  Fully automated release - auto-commits changes, auto-bumps version, auto-generates release notes, and publishes to GitHub.
 user_invocable: true
-user_invocable_example: "/release 2.8.0"
+user_invocable_example: "/release"
 ---
 
-# Audio Remote Release
+# Audio Remote - Automated Release
 
 ## Usage
 
 ```bash
-/release <VERSION>
+/release
 ```
 
-This runs `./scripts/release.sh` which handles everything automatically.
+**That's it!** No arguments, no prompts, fully automated.
 
-## What the Script Does
+## What Happens Automatically
 
-1. Updates version in `Info.plist`
-2. Builds Rust FFI + Swift app
-3. Creates DMG and ZIP
-4. Commits, tags, and pushes
-5. Creates GitHub Release
+1. **Auto-commit** - Commits any uncommitted changes
+2. **Auto-version** - Determines version bump from commit messages:
+   - `MAJOR` - "breaking" or "major" in commits
+   - `MINOR` - "feat", "new", or "✨" in commits
+   - `PATCH` - everything else (default)
+3. **Auto-release-notes** - Extracts from git commits since last tag
+4. **Build & Publish** - Runs full release pipeline
 
-**No signing, no appcast.xml needed** - app uses custom GitHub Releases integration.
+## Commit Message Conventions
 
-## Release Notes Format
+For best auto-detection, use conventional commits:
+- `feat:` or `✨` → Minor version bump, "New" in release notes
+- `fix:` or `🔧` → Patch version, "Fix" in notes
+- `docs:` or `📝` → "Docs" in notes
+- `perf:` or `⚡` → "Performance" in notes
+- `breaking:` → Major version bump
 
-When prompted, use emoji prefixes:
-- `✨ New:` - New features
-- `🔧 Fix:` - Bug fixes
-- `🎯 Enhanced:` - Improvements
-- `🗑️ Removed:` - Removed features
-- `⚠️ Breaking:` - Breaking changes
+## Manual Override (if needed)
 
-## Version Numbering
-
-Use semantic versioning `MAJOR.MINOR.PATCH`:
-- **PATCH** (2.7.1): Bug fixes only
-- **MINOR** (2.8.0): New features, backward compatible
-- **MAJOR** (3.0.0): Breaking changes
+If you need to specify version manually:
+```bash
+./scripts/release.sh <VERSION> "<note 1>" "<note 2>"
+```
 
 ## Troubleshooting
 
-**Rust not installed?**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source "$HOME/.cargo/env"
-rustup target add x86_64-apple-darwin aarch64-apple-darwin
-```
+**Rust not installed?** The script will prompt to install.
 
 **Build fails?**
 ```bash
 swift package clean
-./scripts/release.sh <VERSION>
-```
-
-**GitHub CLI not authenticated?**
-```bash
-gh auth login
+/release
 ```
