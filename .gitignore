@@ -44,3 +44,8 @@ dist/
 # Release builds (keep locally)
 releases/
 bin/
+
+# Rust FFI build artifacts
+AudioRemote/RustFFI/target/
+AudioRemote/RustFFI/Cargo.lock
+AudioRemote/RustFFI/*.a
