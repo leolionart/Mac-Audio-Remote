@@ -107,7 +107,7 @@ Insert new `<item>` after `<language>en</language>`:
     ]]></description>
     <pubDate>${RFC822_DATE}</pubDate>
     <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip"
-               sparkle:version="${NEW_VERSION}"
+               sparkle:version="${NEW_BUILD}"
                sparkle:shortVersionString="${NEW_VERSION}"
                sparkle:edSignature="${ED_SIGNATURE}"
                length="${ZIP_SIZE}"
@@ -115,6 +115,9 @@ Insert new `<item>` after `<language>en</language>`:
     <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
 </item>
 ```
+
+**CRITICAL**: `sparkle:version` MUST be the BUILD NUMBER (e.g., "21"), NOT the version string (e.g., "2.5.0").
+Sparkle compares this with `CFBundleVersion` in the app. Using version strings causes incorrect comparisons.
 
 Date format for pubDate:
 ```bash
