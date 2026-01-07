@@ -58,7 +58,9 @@ class MenuBarController {
     private func observeStateChanges() {
         // Observe mic state changes
         audioManager.$isMuted
-            .sink { [weak self] _ in
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] muted in
+                print("isMuted changed to: \(muted)")
                 self?.updateIcon()
             }
             .store(in: &cancellables)
@@ -66,11 +68,22 @@ class MenuBarController {
 
     private func updateIcon() {
         if let button = statusItem.button {
+            // Get actual mute state (not the published property which may be stale)
+            let actualMuted: Bool
+            switch audioManager.muteMode {
+            case .hardwareMute:
+                actualMuted = audioManager.getHardwareMuteState()
+            case .volumeZero:
+                actualMuted = audioManager.getVolume() == 0.0
+            case .deviceSwitch:
+                actualMuted = audioManager.isMuted
+            }
+
             // Use SF Symbols mic icons for mute/unmute state
-            let iconName = audioManager.isMuted ? "mic.slash.fill" : "mic.fill"
+            let iconName = actualMuted ? "mic.slash.fill" : "mic.fill"
             button.image = NSImage(
                 systemSymbolName: iconName,
-                accessibilityDescription: audioManager.isMuted ? "Microphone Muted" : "Microphone Active"
+                accessibilityDescription: actualMuted ? "Microphone Muted" : "Microphone Active"
             )
             button.image?.isTemplate = true
         }
@@ -82,7 +95,11 @@ class MenuBarController {
         if let button = statusItem.button {
             if popover.isShown {
                 popover.performClose(nil)
+                // Stop audio level monitoring when popover closes
+                audioManager.stopInputLevelMonitoring()
             } else {
+                // Start audio level monitoring when popover opens
+                audioManager.startInputLevelMonitoring()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 // Activate app to ensure popover gets focus
                 NSApp.activate(ignoringOtherApps: true)

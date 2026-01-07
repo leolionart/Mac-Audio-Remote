@@ -18,6 +18,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         audioManager = AudioManager()
         settingsManager = SettingsManager()
 
+        // Sync settings to AudioManager
+        syncSettingsToAudioManager()
+
         // Request notification permission
         NotificationService.shared.requestAuthorization()
 
@@ -92,5 +95,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.settingsManager.save()
             }
         }
+    }
+
+    /// Sync settings from SettingsManager to AudioManager
+    private func syncSettingsToAudioManager() {
+        audioManager.muteMode = settingsManager.settings.muteMode
+        audioManager.nullDeviceUID = settingsManager.settings.nullDeviceUID
+        audioManager.realMicDeviceUID = settingsManager.settings.realMicDeviceUID
+
+        print("Synced settings to AudioManager:")
+        print("  - Mute mode: \(settingsManager.settings.muteMode.rawValue)")
+        print("  - Null device UID: \(settingsManager.settings.nullDeviceUID ?? "not set")")
+        print("  - Real mic UID: \(settingsManager.settings.realMicDeviceUID ?? "not set")")
     }
 }

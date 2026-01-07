@@ -65,6 +65,11 @@ class GlobalHotkeyManager {
         let muted = audioManager.toggle()
         settingsManager.incrementRequestCount()
 
+        // Show HUD overlay on main thread
+        DispatchQueue.main.async {
+            MicrophoneHUDController.shared.show(isMuted: muted)
+        }
+
         // Show notification if enabled
         if settingsManager.settings.notificationsEnabled {
             NotificationService.shared.showMicToggle(isMuted: muted, source: "Global Hotkey")

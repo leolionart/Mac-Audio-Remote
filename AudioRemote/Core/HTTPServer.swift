@@ -110,10 +110,20 @@ class HTTPServer {
                 throw Abort(.internalServerError, reason: "Server not initialized")
             }
 
+            // Get real mic name if available
+            var realMicName: String? = nil
+            if let realMicUID = self.audioManager.realMicDeviceUID,
+               let deviceID = self.audioManager.findDeviceByUID(realMicUID) {
+                realMicName = self.audioManager.getDeviceName(deviceID)
+            }
+
             return StatusResponse(
                 muted: self.audioManager.isMuted,
                 outputVolume: self.audioManager.outputVolume,
-                outputMuted: self.audioManager.isOutputMuted
+                outputMuted: self.audioManager.isOutputMuted,
+                muteMode: self.audioManager.muteMode.rawValue,
+                currentInputDevice: self.audioManager.currentInputDeviceName,
+                realMic: realMicName
             )
         }
 
@@ -505,6 +515,9 @@ struct StatusResponse: Content {
     let muted: Bool
     let outputVolume: Float
     let outputMuted: Bool
+    let muteMode: String
+    let currentInputDevice: String
+    let realMic: String?
 }
 
 struct VolumeResponse: Content {

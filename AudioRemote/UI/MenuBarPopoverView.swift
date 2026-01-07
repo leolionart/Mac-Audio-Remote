@@ -23,7 +23,7 @@ struct MenuBarPopoverView: View {
             // Mic Control Section
             MicControlSection(
                 isMuted: audioManager.isMuted,
-                volume: audioManager.currentVolume,
+                inputLevel: audioManager.inputLevel,
                 toggleMic: {
                     let muted = audioManager.toggle()
                     settingsManager.incrementRequestCount()
@@ -135,7 +135,7 @@ struct HeaderSection: View {
 // MARK: - Mic Control Section
 struct MicControlSection: View {
     let isMuted: Bool
-    let volume: Float
+    let inputLevel: Float  // Real-time audio level
     let toggleMic: () -> Void
 
     var body: some View {
@@ -146,9 +146,6 @@ struct MicControlSection: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
-                Text("\(Int(volume * 100))%")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
             }
 
             // Toggle button with progress
@@ -179,24 +176,54 @@ struct MicControlSection: View {
             }
             .buttonStyle(.plain)
 
-            // Volume indicator
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 6)
-
-                    // Progress
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(isMuted ? Color.gray : Color.blue)
-                        .frame(width: geometry.size.width * CGFloat(volume), height: 6)
+            // Real-time audio level indicator
+            VStack(spacing: 4) {
+                HStack {
+                    Text("Input Level")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(isMuted ? "Muted" : "\(Int(inputLevel * 100))%")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(isMuted ? .red : .secondary)
                 }
+
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        // Background
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 8)
+
+                        // Level meter with gradient
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(
+                                LinearGradient(
+                                    colors: isMuted ? [Color.gray, Color.gray] : levelColors(for: inputLevel),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * CGFloat(isMuted ? 0 : inputLevel), height: 8)
+                            .animation(.easeOut(duration: 0.1), value: inputLevel)
+                    }
+                }
+                .frame(height: 8)
             }
-            .frame(height: 6)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    /// Get gradient colors based on level
+    private func levelColors(for level: Float) -> [Color] {
+        if level < 0.5 {
+            return [Color.green.opacity(0.7), Color.green]
+        } else if level < 0.8 {
+            return [Color.green, Color.yellow]
+        } else {
+            return [Color.yellow, Color.red]
+        }
     }
 }
 

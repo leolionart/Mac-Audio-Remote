@@ -1,6 +1,24 @@
 import Foundation
 import Combine
 
+/// Mute strategy for microphone
+enum MuteMode: String, Codable, CaseIterable {
+    case volumeZero     // Set volume to 0 (may not block all apps)
+    case hardwareMute   // Use hardware mute property (recommended)
+    case deviceSwitch   // Switch to null device (requires BlackHole)
+
+    var displayName: String {
+        switch self {
+        case .volumeZero:
+            return "Volume (may not block all apps)"
+        case .hardwareMute:
+            return "Hardware Mute (recommended)"
+        case .deviceSwitch:
+            return "Device Switch (requires BlackHole)"
+        }
+    }
+}
+
 struct AppSettings: Codable {
     var autoStart: Bool = false
     var notificationsEnabled: Bool = true
@@ -8,6 +26,11 @@ struct AppSettings: Codable {
     var httpPort: Int = 8765
     var requestCount: Int = 0
     var volumeStep: Float = 0.1 // Volume change step (0.0-1.0), default 10%
+
+    // Mute mode settings
+    var muteMode: MuteMode = .hardwareMute
+    var nullDeviceUID: String? = nil      // UID of virtual silent device (e.g., BlackHole)
+    var realMicDeviceUID: String? = nil   // UID of real microphone (saved for restore)
 }
 
 class SettingsManager: ObservableObject {
