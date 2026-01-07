@@ -23,7 +23,8 @@ class HTTPServer {
 
     // MARK: - Public Methods
 
-    func start(port: Int = 8765) throws {
+    @MainActor
+    func start(port: Int = 8765) async throws {
         guard !isRunning else {
             print("HTTP server already running")
             return
@@ -37,7 +38,7 @@ class HTTPServer {
         var env = Environment.production
         env.arguments = ["vapor"]
 
-        app = Application(env)
+        app = try await Application.make(env)
 
         // Configure routes
         configureRoutes(app!)
@@ -473,13 +474,16 @@ class HTTPServer {
         restartTask?.cancel()
 
         // Schedule restart
-        restartTask = Task {
-            try? await Task.sleep(nanoseconds: restartDelay)
+        let delay = restartDelay
+        restartTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
 
             guard !Task.isCancelled else {
                 print("Restart task cancelled")
                 return
             }
+
+            guard let self = self else { return }
 
             print("Restarting HTTP server...")
 
@@ -491,14 +495,14 @@ class HTTPServer {
             }
 
             // Attempt restart
-            await MainActor.run {
-                do {
-                    try self.start(port: self.settingsManager.settings.httpPort)
+            do {
+                try await self.start(port: self.settingsManager.settings.httpPort)
+                await MainActor.run {
                     self.errorCount = 0 // Reset error count on successful restart
                     print("HTTP server restarted successfully")
-                } catch {
-                    print("Failed to restart HTTP server: \(error)")
                 }
+            } catch {
+                print("Failed to restart HTTP server: \(error)")
             }
         }
     }

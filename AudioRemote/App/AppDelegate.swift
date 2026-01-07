@@ -76,23 +76,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Private Methods
 
     private func startHTTPServer() {
-        do {
-            try httpServer.start(port: settingsManager.settings.httpPort)
-        } catch {
-            print("Failed to start HTTP server: \(error)")
+        Task {
+            do {
+                try await httpServer.start(port: settingsManager.settings.httpPort)
+            } catch {
+                print("Failed to start HTTP server: \(error)")
 
-            // Show error alert
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "HTTP Server Error"
-                alert.informativeText = "Failed to start HTTP server on port \(self.settingsManager.settings.httpPort).\n\nError: \(error.localizedDescription)\n\nPlease check if another application is using this port."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
+                // Show error alert
+                await MainActor.run {
+                    let alert = NSAlert()
+                    alert.messageText = "HTTP Server Error"
+                    alert.informativeText = "Failed to start HTTP server on port \(self.settingsManager.settings.httpPort).\n\nError: \(error.localizedDescription)\n\nPlease check if another application is using this port."
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
 
-                // Disable HTTP server in settings
-                self.settingsManager.settings.httpServerEnabled = false
-                self.settingsManager.save()
+                    // Disable HTTP server in settings
+                    self.settingsManager.settings.httpServerEnabled = false
+                    self.settingsManager.save()
+                }
             }
         }
     }
