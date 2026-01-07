@@ -6,6 +6,27 @@
         <description>Most recent updates for Audio Remote</description>
         <language>en</language>
     <item>
+        <title>Version 2.5.0</title>
+        <description><![CDATA[
+                <h2>Version 2.5.0</h2>
+                <ul>
+                    <li>✨ New: Device Switch mute mode - blocks all apps by switching to null device</li>
+                    <li>✨ New: Real-time audio input level indicator</li>
+                    <li>✨ New: Input device selection and management</li>
+                    <li>🔧 Improved: Display current input device name</li>
+                    <li>🎯 Enhanced: Settings UI for mute mode selection</li>
+                </ul>
+        ]]></description>
+        <pubDate>Wed, 07 Jan 2026 10:58:21 GMT</pubDate>
+        <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.5.0/AudioRemote-2.5.0.zip"
+                   sparkle:version="2.5.0"
+                   sparkle:shortVersionString="2.5.0"
+                   sparkle:edSignature="zNwsRUayC1FYc7H9UyX9uOgtA5T0s2PyHsLcgAE/u77wSfUbIOPx6LSTsWnaAUAXzsAJLNOtb1KhFhPVHvXuDA=="
+                   length="14439405"
+                   type="application/octet-stream" />
+        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
         <title>Version 2.4.0</title>
         <description><![CDATA[
                 <h2>Version 2.4.0</h2>
