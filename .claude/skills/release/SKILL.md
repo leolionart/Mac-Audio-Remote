@@ -1,32 +1,42 @@
 ---
 name: release
 description: >-
-  Release workflow for Audio Remote macOS app. Use when releasing a new version.
-  Handles version bump, build, EdDSA signing, appcast.xml update, git tag, and GitHub Release.
-  All builds and signing happen locally - GitHub Actions only runs CI tests.
+  Release workflow for Audio Remote macOS app using DMG distribution and Rust FFI version comparison.
+  Handles version bump, Rust FFI build, DMG/ZIP creation, git tag, and GitHub Release.
+  All builds happen locally - GitHub Actions only runs CI tests.
 user_invocable: true
-user_invocable_example: "/release 2.6.0"
+user_invocable_example: "/release 2.7.0"
 ---
 
 # Audio Remote Release Process
 
-This skill handles the complete release workflow for Audio Remote.
+This skill handles the complete release workflow for Audio Remote with DMG distribution and custom GitHub Releases update system.
 
 ## Workflow Overview
 
 ```
-1. Commit changes → 2. Bump version → 3. Build → 4. Sign ZIP → 5. Update appcast.xml → 6. Push + Tag → 7. GitHub Release
+1. Commit changes → 2. Bump version → 3. Build (Rust + Swift) → 4. Create DMG + ZIP → 5. Push + Tag → 6. GitHub Release
 ```
 
-**IMPORTANT**: All builds and signing happen LOCALLY. GitHub Actions release.yml is DISABLED to avoid duplicate releases with mismatched signatures.
+**IMPORTANT**: All builds happen LOCALLY using `scripts/release.sh`. GitHub Actions release.yml is DISABLED.
 
 ## Quick Release Command
 
 When user invokes `/release <version>`:
 
 ```bash
-# Example: /release 2.6.0
+# Example: /release 2.7.0
+./scripts/release.sh 2.7.0 "✨ New: Feature" "🔧 Fix: Bug fix"
 ```
+
+## Architecture Changes (v2.7.0+)
+
+- ✅ **Custom Update System**: Replaced Sparkle with custom GitHub Releases integration
+- ✅ **DMG Distribution**: Primary format (ZIP as fallback for compatibility)
+- ✅ **Rust FFI**: Robust semantic version comparison
+- ✅ **Quarantine Removal**: Triple `xattr -cr` for unsigned app installation
+- ❌ **No appcast.xml**: UpdateChecker queries GitHub Releases API directly
+- ❌ **No EdDSA Signing**: Not needed for custom update system
 
 ## Step-by-Step Process
 
@@ -39,6 +49,17 @@ git status --porcelain
 # Check current version
 defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleShortVersionString
 defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleVersion
+
+# Verify Rust is installed
+rustc --version
+cargo --version
+```
+
+**If Rust not installed**:
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+rustup target add x86_64-apple-darwin aarch64-apple-darwin
 ```
 
 ### 2. Commit Outstanding Changes
@@ -48,7 +69,7 @@ If there are uncommitted changes, commit them first with a descriptive message.
 ### 3. Update Version in Info.plist
 
 ```bash
-NEW_VERSION="2.6.0"  # From user input
+NEW_VERSION="2.7.0"  # From user input
 CURRENT_BUILD=$(defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleVersion)
 NEW_BUILD=$((CURRENT_BUILD + 1))
 
@@ -56,117 +77,115 @@ NEW_BUILD=$((CURRENT_BUILD + 1))
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD" "AudioRemote/Resources/Info.plist"
 ```
 
-### 4. Build App Bundle
+### 4. Build App Bundle (Rust FFI + Swift)
 
 ```bash
 ./scripts/build_app_bundle.sh
 ```
 
-This creates `.build/release/AudioRemote.app` with:
-- Binary
-- Info.plist
-- Resources
-- Sparkle.framework
+This script:
+1. **Builds Rust FFI** (`AudioRemote/RustFFI/build.sh`):
+   - Compiles for x86_64-apple-darwin
+   - Compiles for aarch64-apple-darwin
+   - Creates universal binary with `lipo`
+   - Output: `AudioRemote/RustFFI/libaudioremote_ffi.a`
 
-### 5. Create and Sign ZIP
+2. **Builds Swift** (`swift build -c release`):
+   - Links Rust library via `Package.swift`
+   - Creates `.build/release/AudioRemote` binary
+
+3. **Creates app bundle**:
+   - Copies binary to `AudioRemote.app/Contents/MacOS/`
+   - Copies Info.plist and resources
+   - Output: `.build/release/AudioRemote.app`
+
+### 5. Create DMG and ZIP
 
 ```bash
 cd .build/release
+
+# 1. Create DMG (primary distribution format)
+../../scripts/create_dmg.sh
+mv AudioRemote.dmg "AudioRemote-${NEW_VERSION}.dmg"
+
+# DMG includes:
+# - AudioRemote.app
+# - Symlink to /Applications (for drag-and-drop)
+# - Custom window styling
+# - Compressed UDZO format
+
+# 2. Create ZIP (fallback for compatibility)
 zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app
 ```
 
-Sign with EdDSA (Sparkle):
+### 6. Commit Release Changes
 
 ```bash
-# Download Sparkle tools if needed
-curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
-tar xf /tmp/Sparkle.tar.xz -C /tmp
-
-# Sign (uses private key from Keychain)
-SIGNATURE_OUTPUT=$(/tmp/bin/sign_update "$(pwd)/.build/release/AudioRemote-${NEW_VERSION}.zip")
-
-# Extract signature and length
-ED_SIGNATURE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
-ZIP_SIZE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
-```
-
-### 6. Update appcast.xml
-
-Insert new `<item>` after `<language>en</language>`:
-
-```xml
-<item>
-    <title>Version ${NEW_VERSION}</title>
-    <description><![CDATA[
-            <h2>Version ${NEW_VERSION}</h2>
-            <ul>
-                <li>✨ New: Feature description</li>
-                <li>🔧 Fix: Bug fix description</li>
-                <li>🎯 Enhanced: Improvement description</li>
-            </ul>
-    ]]></description>
-    <pubDate>${RFC822_DATE}</pubDate>
-    <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip"
-               sparkle:version="${NEW_BUILD}"
-               sparkle:shortVersionString="${NEW_VERSION}"
-               sparkle:edSignature="${ED_SIGNATURE}"
-               length="${ZIP_SIZE}"
-               type="application/octet-stream" />
-    <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-</item>
-```
-
-**CRITICAL**: `sparkle:version` MUST be the BUILD NUMBER (e.g., "21"), NOT the version string (e.g., "2.5.0").
-Sparkle compares this with `CFBundleVersion` in the app. Using version strings causes incorrect comparisons.
-
-Date format for pubDate:
-```bash
-PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
-```
-
-### 7. Commit Release Changes
-
-```bash
-git add AudioRemote/Resources/Info.plist appcast.xml
+git add AudioRemote/Resources/Info.plist
 git commit -m "chore: Release v${NEW_VERSION}
 
 - ✨ New: Feature 1
 - 🔧 Fix: Bug fix 1"
 ```
 
-### 8. Push and Create Tag
+### 7. Push and Create Tag
 
 ```bash
 git push origin main
 
-# Create tag
+# Delete existing tag if it exists (for re-releases)
+git tag -d "v${NEW_VERSION}" 2>/dev/null || true
+git push origin ":refs/tags/v${NEW_VERSION}" 2>/dev/null || true
+
+# Create and push new tag
 git tag "v${NEW_VERSION}"
 git push origin "v${NEW_VERSION}"
 ```
 
-### 9. Create GitHub Release
+### 8. Create GitHub Release
 
 ```bash
 gh release create "v${NEW_VERSION}" \
+  ".build/release/AudioRemote-${NEW_VERSION}.dmg" \
   ".build/release/AudioRemote-${NEW_VERSION}.zip" \
   --title "v${NEW_VERSION}" \
   --notes "$(cat <<'EOF'
-## Audio Remote v${NEW_VERSION}
+## 🔧 Audio Remote v${NEW_VERSION}
 
 ### What's New
-- ✨ Feature 1
-- 🔧 Fix 1
+- ✨ New: Feature 1
+- 🔧 Fix: Bug fix 1
 
 ### Installation
-1. Download `AudioRemote-${NEW_VERSION}.zip`
-2. Extract and move to Applications
-3. Launch and grant permissions
+1. Download `AudioRemote-${NEW_VERSION}.dmg` below
+2. Open the DMG file
+3. Drag **AudioRemote** to the **Applications** folder
+4. Launch the app from Applications
+5. Grant necessary permissions when prompted
 
-### Auto-Update
-Existing users will be notified via Sparkle.
+### Requirements
+- macOS 13.0 (Ventura) or later
+- Microphone permission (for mic toggle)
+- Notification permission (for audio notifications)
+
+### iOS Shortcuts Integration
+Control your Mac remotely via HTTP:
+```
+POST http://YOUR_MAC_IP:8765/toggle-mic       # Toggle microphone
+POST http://YOUR_MAC_IP:8765/volume/increase   # Increase volume
+POST http://YOUR_MAC_IP:8765/volume/decrease   # Decrease volume
+POST http://YOUR_MAC_IP:8765/volume/toggle-mute # Mute/unmute
+GET  http://YOUR_MAC_IP:8765/status            # Get current status
+```
+
+For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-Shortcuts-Guide.md).
 EOF
 )"
 ```
+
+**CRITICAL**: Upload order matters!
+- DMG uploaded **first** (UpdateChecker prefers DMG)
+- ZIP uploaded second (backward compatibility)
 
 ## Release Notes Format
 
@@ -187,37 +206,135 @@ Follow semantic versioning:
 
 ## Verification After Release
 
-1. Check release on GitHub: `https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}`
-2. Verify appcast.xml is updated: `curl https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml | head -30`
-3. Test download: `curl -L https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip -o /tmp/test.zip`
-4. Trigger update check in existing app: Settings → Check for Updates
+### 1. Check GitHub Release
+```bash
+open "https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}"
+```
+
+Verify:
+- ✅ DMG is first asset (preferred by UpdateChecker)
+- ✅ ZIP is second asset (fallback)
+- ✅ Release notes are properly formatted
+
+### 2. Test DMG Download
+```bash
+curl -L "https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.dmg" -o /tmp/test.dmg
+
+# Mount and verify
+hdiutil attach /tmp/test.dmg
+ls -la /Volumes/AudioRemote/
+hdiutil detach /Volumes/AudioRemote
+```
+
+### 3. Test Update Check
+1. Open current version of Audio Remote
+2. Go to Settings → About → Check for Updates
+3. Should detect new version and offer DMG download
+4. Click "Update & Install"
+5. Verify:
+   - DMG downloads successfully
+   - App mounts DMG without quarantine warning
+   - App replaces itself and relaunches
+   - Settings window reopens automatically
+
+### 4. Verify GitHub API Response
+```bash
+curl -s "https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases" | jq '.[0] | {tag_name, assets: [.assets[] | {name, browser_download_url}]}'
+```
+
+Should show DMG first, then ZIP.
+
+## Update Flow (How Users Get Updates)
+
+### Automatic Check (Silent)
+- Runs on app launch if 24+ hours since last check
+- Queries GitHub Releases API
+- Skipped versions stored in UserDefaults
+
+### Manual Check (Settings)
+- User clicks "Check for Updates" in Settings
+- Shows update dialog if available
+- User clicks "Update & Install"
+
+### Install Process
+1. Download DMG from GitHub Releases
+2. Strip quarantine: `xattr -cr <DMG>`
+3. Mount DMG: `hdiutil attach -nobrowse`
+4. Copy app to temp: `/tmp/AudioRemote-new.app`
+5. Strip quarantine: `xattr -cr <NEW_APP>`
+6. Unmount DMG: `hdiutil detach`
+7. Set reopen flag: `UserDefaults.standard.set(true, forKey: "audioremote.reopenSettings")`
+8. Terminate app
+9. Relaunch script:
+   - Poll `pgrep` (up to 5 seconds)
+   - Replace old app: `rm -rf <OLD> && mv <NEW> <OLD>`
+   - Final quarantine strip: `xattr -cr <OLD>`
+   - Launch: `open <OLD>`
+10. New app opens, Settings window reopens automatically
 
 ## Troubleshooting
 
-### Sparkle Update Not Working
+### Update Check Fails
+```bash
+# Test GitHub API manually
+curl -s "https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases" | jq '.[0].tag_name'
 
-1. **Check appcast.xml accessibility**:
-   ```bash
-   curl https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml
-   ```
+# Check app's current version
+defaults read /Applications/AudioRemote.app/Contents/Info.plist CFBundleShortVersionString
+```
 
-2. **Verify signature matches**:
-   ```bash
-   /tmp/bin/sign_update downloaded.zip
-   # Compare with appcast.xml edSignature
-   ```
+### Quarantine Warning on Install
+If users see "AudioRemote is damaged and can't be opened":
+```bash
+# Manual fix (users should NOT need this if triple xattr works)
+xattr -cr /Applications/AudioRemote.app
+```
 
-3. **Check public key matches**:
-   - App's Info.plist `SUPublicEDKey` must match signing key pair
-   - Current public key: `SBT2krY3aqHgJZfp8ptMS8SjsplnHPWT33xDu4OGRmE=`
+Root cause: One of the three xattr removals failed.
 
-4. **Force update check**:
-   - User must manually check (Settings → Check for Updates)
-   - Or wait for `SUScheduledCheckInterval` (86400 seconds = 24 hours)
+### Rust FFI Build Fails
+```bash
+# Check Rust installation
+rustc --version
+cargo --version
 
-### GitHub Actions Conflict
+# Check targets
+rustup target list | grep installed
 
-GitHub Actions workflow at `.github/workflows/release.yml` is DISABLED by design.
-The workflow would create duplicate releases with different signatures.
+# Add missing targets
+rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
-If it runs accidentally, delete the GitHub Actions-created assets and re-upload local ZIP.
+# Test build
+cd AudioRemote/RustFFI
+./build.sh
+```
+
+### Version Comparison Not Working
+The Rust FFI handles version comparison. Test it:
+```bash
+# Should be available after build
+cd AudioRemote/RustFFI
+cargo test
+```
+
+## Files Modified by Release Process
+
+- `AudioRemote/Resources/Info.plist` - Version bump
+- `.build/release/AudioRemote.app` - Built app bundle
+- `.build/release/AudioRemote-${VERSION}.dmg` - DMG artifact
+- `.build/release/AudioRemote-${VERSION}.zip` - ZIP artifact
+
+## Files NOT Modified (vs Old Sparkle Workflow)
+
+- ❌ `appcast.xml` - No longer used
+- ❌ EdDSA signatures - No longer needed
+- ❌ `Sparkle.framework` - Removed from app bundle
+
+## Key Implementation Files
+
+- `AudioRemote/Core/UpdateChecker.swift` - GitHub API integration, DMG preference
+- `AudioRemote/Core/UpdateManager.swift` - DMG install, quarantine removal
+- `AudioRemote/RustFFI/` - Version comparison FFI
+- `scripts/build_app_bundle.sh` - Rust + Swift build
+- `scripts/create_dmg.sh` - DMG creation
+- `scripts/release.sh` - Full release automation
