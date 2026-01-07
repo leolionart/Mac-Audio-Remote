@@ -220,65 +220,83 @@ class UpdateManager: NSObject, ObservableObject {
         let fileManager = FileManager.default
 
         // Step 1: Strip quarantine from DMG
-        _ = shell("xattr -cr '\\(dmgPath.path)'")
+        _ = shell("xattr -cr '\(dmgPath.path)'")
 
-        // Step 2: Mount DMG
-        let attachOutput = shell("hdiutil attach -nobrowse '\\(dmgPath.path)'")
+        // Step 2: Mount DMG with explicit device output
+        let attachOutput = shell("hdiutil attach -nobrowse -noverify '\(dmgPath.path)'")
         guard attachOutput.ok else {
-            return .failure(error: "Failed to mount DMG file.")
+            return .failure(error: "Failed to mount DMG file. Output: \(attachOutput.output)")
         }
 
-        // Step 3: Parse mount point from output
-        // Output formats:
-        // - HFS+: "/dev/disk4s2    Apple_HFS    /Volumes/AudioRemote"
-        // - APFS: "/dev/disk9s1    41504653-0000-11AA-AA11-0030654    /Volumes/AudioRemote"
-        var mountPoint: String?
-        for line in attachOutput.output.components(separatedBy: "\\n") {
+        // Step 3: Parse device and mount point from output
+        // Expected output format (last line contains mount info):
+        // /dev/disk4              FDisk_partition_scheme
+        // /dev/disk4s1            Windows_FAT_32
+        // /dev/disk4s2            Apple_HFS              /Volumes/AudioRemote
+        // or for APFS:
+        // /dev/disk9              GUID_partition_scheme
+        // /dev/disk9s1            41504653-0000-11AA-AA11-0030654  /Volumes/AudioRemote
+
+        var devicePath: String?
+        var volumePath: String?
+
+        // Parse output - find the line with /Volumes/ (last mount line)
+        let lines = attachOutput.output.components(separatedBy: "\n").filter { !$0.isEmpty }
+        for line in lines.reversed() {
             if line.contains("/Volumes/") {
-                // Split by tabs and spaces, find the /Volumes/ component
-                let components = line.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-                if let volumeComponent = components.first(where: { $0.hasPrefix("/Volumes/") }) {
-                    mountPoint = volumeComponent
+                // Extract device path (first field) and volume path (last field)
+                let fields = line.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                if fields.count >= 2,
+                   fields[0].hasPrefix("/dev/"),
+                   let volPath = fields.last(where: { $0.hasPrefix("/Volumes/") }) {
+                    devicePath = fields[0]
+                    volumePath = volPath
                     break
                 }
             }
         }
 
-        guard let volumePath = mountPoint else {
-            _ = shell("hdiutil detach '\\(dmgPath.path)' -force")
-            return .failure(error: "Could not find mount point in DMG.")
+        guard let device = devicePath, let volume = volumePath else {
+            // Try to force detach using dmg path as fallback
+            _ = shell("hdiutil detach '\(dmgPath.path)' -force 2>/dev/null || true")
+            return .failure(error: "Could not parse mount point. Output: \(attachOutput.output)")
         }
 
-        // Step 4: Find AudioRemote.app in mount
+        // Step 4: Find AudioRemote.app in mounted volume
         var appInDMG: String?
-        if let contents = try? fileManager.contentsOfDirectory(atPath: volumePath) {
+        if let contents = try? fileManager.contentsOfDirectory(atPath: volume) {
             for item in contents {
                 if item.hasSuffix(".app") {
-                    appInDMG = (volumePath as NSString).appendingPathComponent(item)
+                    appInDMG = (volume as NSString).appendingPathComponent(item)
                     break
                 }
             }
         }
 
         guard let sourceApp = appInDMG else {
-            _ = shell("hdiutil detach '\\(volumePath)' -force")
+            _ = shell("hdiutil detach '\(device)' -force")
             return .failure(error: "No app bundle found in DMG.")
         }
 
         // Step 5: Copy to temp location
         let tempApp = "/tmp/AudioRemote-new.app"
-        _ = shell("rm -rf '\\(tempApp)'")
-        let copyOutput = shell("cp -R '\\(sourceApp)' '\\(tempApp)'")
+        _ = shell("rm -rf '\(tempApp)'")
+        let copyOutput = shell("cp -R '\(sourceApp)' '\(tempApp)'")
         guard copyOutput.ok else {
-            _ = shell("hdiutil detach '\\(volumePath)' -force")
+            _ = shell("hdiutil detach '\(device)' -force")
             return .failure(error: "Failed to copy app from DMG.")
         }
 
-        // Step 6: Strip quarantine from copied app
-        _ = shell("xattr -cr '\\(tempApp)'")
+        // Step 6: Strip quarantine from copied app (double strip for safety)
+        _ = shell("xattr -cr '\(tempApp)'")
+        _ = shell("xattr -d com.apple.quarantine '\(tempApp)' 2>/dev/null || true")
 
-        // Step 7: Unmount DMG
-        _ = shell("hdiutil detach '\\(volumePath)'")
+        // Step 7: Unmount DMG using device path (more reliable than volume path)
+        let detachOutput = shell("hdiutil detach '\(device)' -force")
+        if !detachOutput.ok {
+            // Log warning but don't fail - we already copied the app
+            print("Warning: Failed to detach DMG device \(device): \(detachOutput.output)")
+        }
 
         return .success(tempApp: tempApp)
     }
