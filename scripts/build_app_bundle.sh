@@ -54,15 +54,6 @@ if [ -d "$BUILD_DIR/AudioRemote_AudioRemote.bundle" ]; then
     fi
 fi
 
-# Copy Sparkle framework
-echo "📦 Copying Sparkle.framework..."
-if [ -d "$BUILD_DIR/Sparkle.framework" ]; then
-    cp -R "$BUILD_DIR/Sparkle.framework" "$FRAMEWORKS/"
-    echo "   ✓ Copied Sparkle.framework"
-else
-    echo "   ⚠️  Warning: Sparkle.framework not found in $BUILD_DIR"
-fi
-
 # Set executable permission
 chmod +x "$MACOS/$APP_NAME"
 
