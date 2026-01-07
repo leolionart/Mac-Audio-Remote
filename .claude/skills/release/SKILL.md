@@ -29,6 +29,8 @@ When user invokes `/release <version>`:
 ./scripts/release.sh 2.7.0 "✨ New: Feature" "🔧 Fix: Bug fix"
 ```
 
+**That's it!** The script automates everything: version bump, Rust build, DMG/ZIP creation, git push, tagging, and GitHub release.
+
 ## Architecture Changes (v2.7.0+)
 
 - ✅ **Custom Update System**: Replaced Sparkle with custom GitHub Releases integration
@@ -38,9 +40,19 @@ When user invokes `/release <version>`:
 - ❌ **No appcast.xml**: UpdateChecker queries GitHub Releases API directly
 - ❌ **No EdDSA Signing**: Not needed for custom update system
 
-## Step-by-Step Process
+## Automated Release Process
 
-### 1. Pre-flight Checks
+### Overview
+
+`./scripts/release.sh` is a **fully automated** script that handles the entire release workflow. You only need to:
+
+1. **Pre-flight checks** (git status, Rust installed)
+2. **Commit any uncommitted changes**
+3. **Run the script** with version and release notes
+
+The script then automates all remaining steps.
+
+### Step 1: Pre-flight Checks
 
 ```bash
 # Check for uncommitted changes
@@ -57,135 +69,42 @@ cargo --version
 
 **If Rust not installed**:
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-rustup target add x86_64-apple-darwin aarch64-apple-darwin
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
+rustup target add x86_64-apple-darwin
 ```
 
-### 2. Commit Outstanding Changes
+### Step 2: Commit Outstanding Changes
 
 If there are uncommitted changes, commit them first with a descriptive message.
 
-### 3. Update Version in Info.plist
+### Step 3: Run Release Script
 
 ```bash
-NEW_VERSION="2.7.0"  # From user input
-CURRENT_BUILD=$(defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleVersion)
-NEW_BUILD=$((CURRENT_BUILD + 1))
+./scripts/release.sh <VERSION> "<release note 1>" "<release note 2>" ...
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEW_VERSION" "AudioRemote/Resources/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD" "AudioRemote/Resources/Info.plist"
+# Example:
+./scripts/release.sh 2.7.0 \
+  "✨ New: DMG-based update system" \
+  "✨ New: Rust FFI for version comparison" \
+  "🗑️ Removed: Sparkle framework dependency"
 ```
 
-### 4. Build App Bundle (Rust FFI + Swift)
+**The script automatically performs ALL these steps:**
 
-```bash
-./scripts/build_app_bundle.sh
-```
+1. ✅ **Version Bump**: Updates `CFBundleShortVersionString` and `CFBundleVersion` in Info.plist
+2. ✅ **Build Rust FFI**: Compiles universal binary (x86_64 + arm64) via `AudioRemote/RustFFI/build.sh`
+3. ✅ **Build Swift**: Links Rust library and builds release binary
+4. ✅ **Create App Bundle**: Packages binary with Info.plist and resources
+5. ✅ **Create DMG**: Primary distribution format with Applications symlink
+6. ✅ **Create ZIP**: Fallback format for compatibility
+7. ✅ **Commit Changes**: Commits version bump with formatted release notes
+8. ✅ **Push & Tag**: Pushes to origin and creates/pushes git tag
+9. ✅ **GitHub Release**: Creates release with DMG (first) and ZIP (second) assets
 
-This script:
-1. **Builds Rust FFI** (`AudioRemote/RustFFI/build.sh`):
-   - Compiles for x86_64-apple-darwin
-   - Compiles for aarch64-apple-darwin
-   - Creates universal binary with `lipo`
-   - Output: `AudioRemote/RustFFI/libaudioremote_ffi.a`
-
-2. **Builds Swift** (`swift build -c release`):
-   - Links Rust library via `Package.swift`
-   - Creates `.build/release/AudioRemote` binary
-
-3. **Creates app bundle**:
-   - Copies binary to `AudioRemote.app/Contents/MacOS/`
-   - Copies Info.plist and resources
-   - Output: `.build/release/AudioRemote.app`
-
-### 5. Create DMG and ZIP
-
-```bash
-cd .build/release
-
-# 1. Create DMG (primary distribution format)
-../../scripts/create_dmg.sh
-mv AudioRemote.dmg "AudioRemote-${NEW_VERSION}.dmg"
-
-# DMG includes:
-# - AudioRemote.app
-# - Symlink to /Applications (for drag-and-drop)
-# - Custom window styling
-# - Compressed UDZO format
-
-# 2. Create ZIP (fallback for compatibility)
-zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app
-```
-
-### 6. Commit Release Changes
-
-```bash
-git add AudioRemote/Resources/Info.plist
-git commit -m "chore: Release v${NEW_VERSION}
-
-- ✨ New: Feature 1
-- 🔧 Fix: Bug fix 1"
-```
-
-### 7. Push and Create Tag
-
-```bash
-git push origin main
-
-# Delete existing tag if it exists (for re-releases)
-git tag -d "v${NEW_VERSION}" 2>/dev/null || true
-git push origin ":refs/tags/v${NEW_VERSION}" 2>/dev/null || true
-
-# Create and push new tag
-git tag "v${NEW_VERSION}"
-git push origin "v${NEW_VERSION}"
-```
-
-### 8. Create GitHub Release
-
-```bash
-gh release create "v${NEW_VERSION}" \
-  ".build/release/AudioRemote-${NEW_VERSION}.dmg" \
-  ".build/release/AudioRemote-${NEW_VERSION}.zip" \
-  --title "v${NEW_VERSION}" \
-  --notes "$(cat <<'EOF'
-## 🔧 Audio Remote v${NEW_VERSION}
-
-### What's New
-- ✨ New: Feature 1
-- 🔧 Fix: Bug fix 1
-
-### Installation
-1. Download `AudioRemote-${NEW_VERSION}.dmg` below
-2. Open the DMG file
-3. Drag **AudioRemote** to the **Applications** folder
-4. Launch the app from Applications
-5. Grant necessary permissions when prompted
-
-### Requirements
-- macOS 13.0 (Ventura) or later
-- Microphone permission (for mic toggle)
-- Notification permission (for audio notifications)
-
-### iOS Shortcuts Integration
-Control your Mac remotely via HTTP:
-```
-POST http://YOUR_MAC_IP:8765/toggle-mic       # Toggle microphone
-POST http://YOUR_MAC_IP:8765/volume/increase   # Increase volume
-POST http://YOUR_MAC_IP:8765/volume/decrease   # Decrease volume
-POST http://YOUR_MAC_IP:8765/volume/toggle-mute # Mute/unmute
-GET  http://YOUR_MAC_IP:8765/status            # Get current status
-```
-
-For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-Shortcuts-Guide.md).
-EOF
-)"
-```
-
-**CRITICAL**: Upload order matters!
-- DMG uploaded **first** (UpdateChecker prefers DMG)
-- ZIP uploaded second (backward compatibility)
+**Upload Order (CRITICAL):**
+- DMG uploaded **first** → UpdateChecker prefers DMG
+- ZIP uploaded second → Backward compatibility fallback
 
 ## Release Notes Format
 
@@ -207,8 +126,16 @@ Follow semantic versioning:
 ## Verification After Release
 
 ### 1. Check GitHub Release
+
+The script outputs the release URL at the end:
+```
+✅ Release v2.7.0 Complete!
+🔗 Release URL: https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v2.7.0
+```
+
+Or check manually:
 ```bash
-open "https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}"
+gh release view v${NEW_VERSION} --json tagName,assets
 ```
 
 Verify:
@@ -216,17 +143,17 @@ Verify:
 - ✅ ZIP is second asset (fallback)
 - ✅ Release notes are properly formatted
 
-### 2. Test DMG Download
-```bash
-curl -L "https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.dmg" -o /tmp/test.dmg
+### 2. Verify GitHub API Response
 
-# Mount and verify
-hdiutil attach /tmp/test.dmg
-ls -la /Volumes/AudioRemote/
-hdiutil detach /Volumes/AudioRemote
+```bash
+curl -s "https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases" | jq '.[0] | {tag_name, assets: [.assets[] | {name, browser_download_url}]}'
 ```
 
-### 3. Test Update Check
+Should show DMG first, then ZIP.
+
+### 3. Test Update Check (Optional)
+
+**Manual test on a real Mac:**
 1. Open current version of Audio Remote
 2. Go to Settings → About → Check for Updates
 3. Should detect new version and offer DMG download
@@ -237,12 +164,7 @@ hdiutil detach /Volumes/AudioRemote
    - App replaces itself and relaunches
    - Settings window reopens automatically
 
-### 4. Verify GitHub API Response
-```bash
-curl -s "https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases" | jq '.[0] | {tag_name, assets: [.assets[] | {name, browser_download_url}]}'
-```
-
-Should show DMG first, then ZIP.
+**Note**: This requires running an older version, so it's optional for most releases.
 
 ## Update Flow (How Users Get Updates)
 
