@@ -79,6 +79,35 @@ open http://localhost:8765
 
 **No signing or appcast.xml needed** - app uses custom GitHub Releases integration.
 
+### Update System Critical Guidelines
+
+**ALWAYS test updates with PREVIOUS version's app, not new build!**
+
+```bash
+# ❌ WRONG: Testing new → new
+./build/release/AudioRemote.app  # Check for Updates
+
+# ✅ CORRECT: Testing old → new
+/Applications/AudioRemote.app    # Check for Updates
+```
+
+**String interpolation in shell commands:**
+```swift
+// ❌ WRONG: Creates literal '\(var)' string
+shell("command '\\(variable)'")
+
+// ✅ CORRECT: Interpolates variable value
+shell("command '\(variable)'")
+```
+
+**Emergency: Remove problematic asset from release:**
+```bash
+# If DMG install fails, force ZIP usage
+gh release delete-asset vX.X.X AudioRemote-X.X.X.dmg --yes
+```
+
+**See `docs/UPDATE_TROUBLESHOOTING.md` for full troubleshooting guide.**
+
 ## Architecture
 
 ### Core Components
