@@ -192,4 +192,4 @@ All detailed documentation is in `docs/`:
 
 - **Minimum**: macOS 13.0 (Ventura)
 - **Permissions**: Microphone access, Accessibility (for global hotkeys)
-- **Unsigned app**: Run `xattr -cr /path/to/AudioRemote.app`
+- **First-time install**: App is ad-hoc signed. Remove quarantine with `xattr -c /Applications/AudioRemote.app` after downloading (note: no `-r` flag - not supported on modern macOS)

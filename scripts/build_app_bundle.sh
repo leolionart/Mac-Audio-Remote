@@ -72,6 +72,10 @@ echo "APPL????" > "$CONTENTS/PkgInfo"
 echo "🔧 Fixing framework rpaths..."
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/$APP_NAME" 2>/dev/null || true
 
+# Ad-hoc sign the app bundle to avoid Gatekeeper blocking
+echo "🔏 Ad-hoc signing app bundle..."
+codesign --force --deep --sign - "$APP_BUNDLE"
+
 echo "✅ Build complete!"
 echo "📂 App bundle: $APP_BUNDLE"
 echo ""

@@ -22,10 +22,16 @@ Native macOS menu bar app for controlling microphone and speaker audio from your
 
 1. Download `AudioRemote.dmg` from [Releases](https://github.com/leolionart/Mac-Audio-Remote/releases)
 2. Open the DMG and drag Audio Remote to Applications
-3. Launch and grant microphone permissions when prompted
-4. Look for the microphone icon in your menu bar
+3. **First-time install only**:
+   ```bash
+   # Remove quarantine flag (added by macOS when downloading)
+   xattr -c /Applications/AudioRemote.app
+   ```
+   Then launch the app normally.
+4. Grant microphone permissions when prompted
+5. Look for the microphone icon in your menu bar
 
-**For unsigned apps**: Run `xattr -cr /Applications/AudioRemote.app` if macOS blocks it.
+**Note**: After first launch, the app can auto-update itself without this step.
 
 ## Quick Setup
 
