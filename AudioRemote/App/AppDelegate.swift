@@ -59,7 +59,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 if settings.httpServerEnabled {
                     self.startHTTPServer()
                 } else {
-                    self.httpServer.stop()
+                    // Stop server asynchronously
+                    Task {
+                        await self.httpServer.stop()
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -77,7 +80,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        httpServer?.stop()
+        // Stop HTTP server gracefully
+        Task {
+            await httpServer?.stop()
+        }
         print("Audio Remote terminated")
     }
 

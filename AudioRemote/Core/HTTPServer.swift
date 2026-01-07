@@ -18,7 +18,10 @@ class HTTPServer {
 
     deinit {
         restartTask?.cancel()
-        stop()
+        // Note: Can't call async stop() in deinit, so we do synchronous shutdown
+        // This is acceptable as deinit only happens on app termination
+        app?.shutdown()
+        app = nil
     }
 
     // MARK: - Public Methods
@@ -62,11 +65,34 @@ class HTTPServer {
         print("HTTP server started on http://\(localIP):\(port)")
     }
 
-    func stop() {
+    func stop() async {
         guard isRunning else { return }
 
         restartTask?.cancel()
-        app?.shutdown()
+
+        // Shutdown the Vapor application asynchronously
+        do {
+            try await app?.asyncShutdown()
+        } catch {
+            print("⚠️ Warning: Error during server shutdown: \(error)")
+        }
+
+        // Wait for port to be fully released
+        let port = settingsManager.settings.httpPort
+        var attempts = 0
+        let maxAttempts = 20 // 20 attempts * 100ms = 2 seconds max wait
+
+        while !NetworkService.isPortAvailable(port: port) && attempts < maxAttempts {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            attempts += 1
+        }
+
+        if attempts >= maxAttempts {
+            print("⚠️ Warning: Port \(port) may not be fully released after \(maxAttempts * 100)ms")
+        } else if attempts > 0 {
+            print("✓ Port \(port) released after \(attempts * 100)ms")
+        }
+
         app = nil
         isRunning = false
         errorCount = 0 // Reset error count on manual stop
@@ -487,12 +513,8 @@ class HTTPServer {
 
             print("Restarting HTTP server...")
 
-            // Stop current server
-            await MainActor.run {
-                self.app?.shutdown()
-                self.app = nil
-                self.isRunning = false
-            }
+            // Stop current server (await the async stop)
+            await self.stop()
 
             // Attempt restart
             do {
