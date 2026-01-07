@@ -58,7 +58,13 @@ CURRENT_BUILD=$(defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundle
 
 echo -e "Current version: ${YELLOW}${CURRENT_VERSION}${NC} (build ${CURRENT_BUILD})"
 echo ""
-read -p "Enter new version (e.g., 2.2.0): " NEW_VERSION
+
+if [ -n "$1" ]; then
+    NEW_VERSION="$1"
+    echo "Using version from argument: $NEW_VERSION"
+else
+    read -p "Enter new version (e.g., 2.2.0): " NEW_VERSION
+fi
 
 if [ -z "$NEW_VERSION" ]; then
     echo -e "${RED}❌ Version cannot be empty${NC}"
@@ -81,21 +87,31 @@ echo ""
 # STEP 3: Collect release notes
 # ============================================================================
 echo -e "${BLUE}[3/8] 📋 Release notes...${NC}"
-echo "Enter release notes (one per line, empty line to finish):"
-echo "Examples:"
-echo "  ✨ New: Feature description"
-echo "  🔧 Fix: Bug fix description"
-echo "  🎯 Enhanced: Improvement description"
-echo ""
 
 RELEASE_ITEMS=()
-while true; do
-    read -p "> " line
-    if [ -z "$line" ]; then
-        break
-    fi
-    RELEASE_ITEMS+=("$line")
-done
+
+if [ -n "$2" ]; then
+    echo "Using release notes from arguments..."
+    # Iterate over remaining arguments starting from $2
+    for note in "${@:2}"; do
+        RELEASE_ITEMS+=("$note")
+    done
+else
+    echo "Enter release notes (one per line, empty line to finish):"
+    echo "Examples:"
+    echo "  ✨ New: Feature description"
+    echo "  🔧 Fix: Bug fix description"
+    echo "  🎯 Enhanced: Improvement description"
+    echo ""
+
+    while true; do
+        read -p "> " line
+        if [ -z "$line" ]; then
+            break
+        fi
+        RELEASE_ITEMS+=("$line")
+    done
+fi
 
 if [ ${#RELEASE_ITEMS[@]} -eq 0 ]; then
     echo -e "${RED}❌ At least one release note is required${NC}"
@@ -153,18 +169,36 @@ echo -e "${GREEN}✓ All required files present${NC}"
 echo ""
 
 # ============================================================================
-# STEP 6: Create ZIP archive
+# STEP 6: Create DMG and ZIP
 # ============================================================================
-echo -e "${BLUE}[6/8] 📦 Creating ZIP archive...${NC}"
+echo -e "${BLUE}[6/8] 📦 Creating artifacts...${NC}"
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 1. Create DMG
+"$SCRIPT_DIR/create_dmg.sh"
 
 cd .build/release
+if [ ! -f "AudioRemote.dmg" ]; then
+    echo -e "${RED}❌ DMG creation failed${NC}"
+    exit 1
+fi
+
+mv "AudioRemote.dmg" "AudioRemote-${NEW_VERSION}.dmg"
+DMG_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.dmg")
+DMG_SIZE_MB=$(echo "scale=2; $DMG_SIZE / 1024 / 1024" | bc)
+echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.dmg (${DMG_SIZE_MB} MB)${NC}"
+
+# 2. Create ZIP (for auto-update compatibility)
+echo "📦 Creating ZIP archive..."
 rm -f "AudioRemote-${NEW_VERSION}.zip"
 zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app > /dev/null
 
 ZIP_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.zip")
 ZIP_SIZE_MB=$(echo "scale=2; $ZIP_SIZE / 1024 / 1024" | bc)
-
 echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.zip (${ZIP_SIZE_MB} MB)${NC}"
+
 cd ../..
 echo ""
 
@@ -203,10 +237,11 @@ GITHUB_RELEASE_NOTES="## 🔧 Audio Remote v${NEW_VERSION}
 $(for item in "${RELEASE_ITEMS[@]}"; do echo "- ${item}"; done)
 
 ### Installation
-1. Download \`AudioRemote-${NEW_VERSION}.zip\` below
-2. Extract and move \`AudioRemote.app\` to Applications folder
-3. Launch the app - it will appear in menu bar
-4. Grant necessary permissions when prompted
+1. Download \`AudioRemote-${NEW_VERSION}.dmg\` below
+2. Open the DMG file
+3. Drag **AudioRemote** to the **Applications** folder
+4. Launch the app from Applications
+5. Grant necessary permissions when prompted
 
 ### Requirements
 - macOS 13.0 (Ventura) or later
@@ -226,6 +261,7 @@ GET  http://YOUR_MAC_IP:8765/status            # Get current status
 For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-Shortcuts-Guide.md)."
 
 gh release create "v${NEW_VERSION}" \
+  ".build/release/AudioRemote-${NEW_VERSION}.dmg" \
   ".build/release/AudioRemote-${NEW_VERSION}.zip" \
   --title "v${NEW_VERSION}" \
   --notes "$GITHUB_RELEASE_NOTES"
@@ -236,5 +272,5 @@ echo -e "${GREEN}║                  ✅ Release v${NEW_VERSION} Complete!     
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${BLUE}🔗 Release URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}"
-echo -e "${BLUE}📦 Download URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip"
+echo -e "${BLUE}📦 Download URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.dmg"
 echo ""

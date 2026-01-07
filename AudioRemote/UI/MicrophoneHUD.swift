@@ -46,6 +46,7 @@ struct MicrophoneHUDView: View {
     }
 }
 
+@MainActor
 class MicrophoneHUDController: ObservableObject {
     static let shared = MicrophoneHUDController()
 
@@ -54,7 +55,6 @@ class MicrophoneHUDController: ObservableObject {
 
     private init() {}
 
-    @MainActor
     func show(isMuted: Bool) {
         NSLog("🎤 MicrophoneHUD: Showing HUD - isMuted: \(isMuted)")
 
@@ -113,12 +113,17 @@ class MicrophoneHUDController: ObservableObject {
             context.duration = 0.3
             window?.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
-            self?.window?.orderOut(nil)
+            Task { @MainActor in
+                self?.window?.orderOut(nil)
+            }
         })
     }
 
     deinit {
         hideTask?.cancel()
-        window?.close()
+        let window = self.window
+        Task { @MainActor in
+            window?.close()
+        }
     }
 }

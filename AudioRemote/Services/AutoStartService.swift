@@ -46,7 +46,7 @@ class AutoStartService {
     // MARK: - Legacy Support (macOS 12 and below)
 
     private func setEnabledLegacy(_ enabled: Bool) {
-        guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
+        guard Bundle.main.bundleIdentifier != nil else {
             print("Cannot get bundle identifier for auto-start")
             return
         }
@@ -57,14 +57,14 @@ class AutoStartService {
                 make login item at end with properties {path:"\(Bundle.main.bundlePath)", hidden:false}
             end tell
             """
-            runAppleScript(script)
+            _ = runAppleScript(script)
         } else {
             let script = """
             tell application "System Events"
                 delete login item "AudioRemote"
             end tell
             """
-            runAppleScript(script)
+            _ = runAppleScript(script)
         }
     }
 

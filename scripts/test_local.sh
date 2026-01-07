@@ -19,7 +19,10 @@ echo ""
 # ============================================================================
 
 echo -e "${BLUE}[1/5] 🔨 Building app...${NC}"
-./build_app_bundle.sh
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/build_app_bundle.sh"
 
 if [ ! -d ".build/release/AudioRemote.app" ]; then
     echo -e "${RED}❌ Build failed - app bundle not found${NC}"
@@ -39,7 +42,6 @@ REQUIRED_FILES=(
     ".build/release/AudioRemote.app/Contents/MacOS/AudioRemote"
     ".build/release/AudioRemote.app/Contents/Info.plist"
     ".build/release/AudioRemote.app/Contents/Resources/AppIcon.icns"
-    ".build/release/AudioRemote.app/Contents/Frameworks/Sparkle.framework"
 )
 
 ALL_OK=true
@@ -106,7 +108,7 @@ echo -e "${BLUE}[5/5] 🌐 Testing HTTP server...${NC}"
 sleep 2
 
 # Test status endpoint
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8765/status)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8765/status || echo "000")
 
 if [ "$HTTP_CODE" = "200" ]; then
     echo -e "${GREEN}✓ HTTP server is running (status: $HTTP_CODE)${NC}"

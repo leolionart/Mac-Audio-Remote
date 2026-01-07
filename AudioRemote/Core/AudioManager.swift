@@ -521,14 +521,16 @@ class AudioManager: ObservableObject {
         var name: CFString?
         var dataSize = UInt32(MemoryLayout<CFString?>.size)
 
-        let status = AudioObjectGetPropertyData(
-            deviceID,
-            &address,
-            0,
-            nil,
-            &dataSize,
-            &name
-        )
+        let status = withUnsafeMutablePointer(to: &name) { namePtr in
+            AudioObjectGetPropertyData(
+                deviceID,
+                &address,
+                0,
+                nil,
+                &dataSize,
+                namePtr
+            )
+        }
 
         if status == noErr, let name = name {
             return name as String
@@ -547,14 +549,16 @@ class AudioManager: ObservableObject {
         var uid: CFString?
         var dataSize = UInt32(MemoryLayout<CFString?>.size)
 
-        let status = AudioObjectGetPropertyData(
-            deviceID,
-            &address,
-            0,
-            nil,
-            &dataSize,
-            &uid
-        )
+        let status = withUnsafeMutablePointer(to: &uid) { uidPtr in
+            AudioObjectGetPropertyData(
+                deviceID,
+                &address,
+                0,
+                nil,
+                &dataSize,
+                uidPtr
+            )
+        }
 
         if status == noErr, let uid = uid {
             return uid as String
@@ -707,7 +711,7 @@ class AudioManager: ObservableObject {
             return noErr
         }
 
-        let selfPointer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        let selfPointer = Unmanaged.passUnretained(self).toOpaque()
 
         let status = AudioObjectAddPropertyListener(
             inputDeviceID,
@@ -766,7 +770,7 @@ class AudioManager: ObservableObject {
             return noErr
         }
 
-        let selfPointer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        let selfPointer = Unmanaged.passUnretained(self).toOpaque()
 
         let status = AudioObjectAddPropertyListener(
             outputDeviceID,
@@ -827,7 +831,7 @@ class AudioManager: ObservableObject {
             return noErr
         }
 
-        let selfPointer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        let selfPointer = Unmanaged.passUnretained(self).toOpaque()
 
         let status = AudioObjectAddPropertyListener(
             AudioObjectID(kAudioObjectSystemObject),
