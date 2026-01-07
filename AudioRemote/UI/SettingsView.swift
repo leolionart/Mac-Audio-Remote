@@ -819,7 +819,6 @@ struct CustomToggleStyle: ToggleStyle {
 // MARK: - Update Section
 struct UpdateSection: View {
     @ObservedObject var updateManager: UpdateManager
-    @State private var isChecking = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -859,7 +858,7 @@ struct UpdateSection: View {
 
                     Spacer()
 
-                    if let lastCheck = updateManager.lastUpdateCheckDate {
+                    if let lastCheck = updateManager.lastCheckDate {
                         Text("Checked: \(formatDate(lastCheck))")
                             .font(.system(size: 11))
                             .foregroundColor(ThemeColors.textMuted)
@@ -867,31 +866,88 @@ struct UpdateSection: View {
                 }
                 .padding(.horizontal, 20)
 
-                // Check for Updates Button
-                Button(action: {
-                    isChecking = true
-                    updateManager.checkForUpdates()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        isChecking = false
-                    }
-                }) {
-                    HStack {
-                        if isChecking {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                // Dynamic Action Area
+                Group {
+                    switch updateManager.state {
+                    case .idle, .upToDate, .error:
+                        VStack(spacing: 8) {
+                            Button(action: {
+                                updateManager.checkForUpdates()
+                            }) {
+                                HStack {
+                                    Text("Check for Updates")
+                                        .font(.system(size: 13, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(ThemeColors.accentBlue)
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+
+                            if case .error(let msg) = updateManager.state {
+                                Text(msg)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(ThemeColors.error)
+                            }
                         }
-                        Text(isChecking ? "Checking..." : "Check for Updates")
-                            .font(.system(size: 13, weight: .semibold))
+
+                    case .checking:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            Text("Checking for updates...")
+                                .font(.system(size: 13))
+                                .foregroundColor(ThemeColors.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(ThemeColors.background)
+                        .cornerRadius(8)
+
+                    case .available(let info):
+                        VStack(spacing: 8) {
+                            Text("New version available: \(info.version)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(ThemeColors.accent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Button(action: {
+                                updateManager.downloadUpdate(info)
+                            }) {
+                                Text("Download & Install")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(ThemeColors.accent)
+                                    .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                    case .downloading(let progress):
+                        VStack(spacing: 8) {
+                            ProgressView(value: progress)
+                                .progressViewStyle(LinearProgressViewStyle(tint: ThemeColors.accent))
+                            Text("Downloading... \(Int(progress * 100))%")
+                                .font(.system(size: 11))
+                                .foregroundColor(ThemeColors.textSecondary)
+                        }
+
+                    case .installing:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            Text("Installing update...")
+                                .font(.system(size: 13))
+                                .foregroundColor(ThemeColors.textSecondary)
+                        }
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(ThemeColors.accentBlue)
-                    .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
-                .disabled(isChecking)
                 .padding(.horizontal, 20)
 
                 // Info message
@@ -899,7 +955,7 @@ struct UpdateSection: View {
                     Image(systemName: "info.circle")
                         .font(.system(size: 14))
                         .foregroundColor(ThemeColors.textMuted)
-                    Text("Automatic updates via Sparkle framework")
+                    Text("Updates are fetched directly from GitHub Releases")
                         .font(.system(size: 11))
                         .foregroundColor(ThemeColors.textMuted)
                     Spacer()

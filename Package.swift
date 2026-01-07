@@ -13,15 +13,13 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.89.0"),
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.89.0")
     ],
     targets: [
         .executableTarget(
             name: "AudioRemote",
             dependencies: [
-                .product(name: "Vapor", package: "vapor"),
-                .product(name: "Sparkle", package: "Sparkle")
+                .product(name: "Vapor", package: "vapor")
             ],
             path: "AudioRemote",
             resources: [

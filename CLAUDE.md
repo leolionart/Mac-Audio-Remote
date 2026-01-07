@@ -10,7 +10,7 @@ Audio Remote is a native macOS menu bar app for controlling both microphone (inp
 - Swift 5.9+ with SwiftUI for UI
 - Core Audio API for direct audio device control (input & output)
 - Vapor framework for HTTP server
-- Sparkle framework for auto-updates
+- Custom GitHub Releases integration for auto-updates
 - Combine for reactive state management
 
 ## Build & Run Commands
@@ -62,9 +62,8 @@ The skill handles the complete workflow:
 1. Commit changes
 2. Bump version in Info.plist
 3. Build app bundle
-4. Create and sign ZIP with EdDSA
-5. Update appcast.xml
-6. Push, tag, and create GitHub Release
+4. Create and sign ZIP
+5. Push, tag, and create GitHub Release
 
 **IMPORTANT**: All builds happen locally. GitHub Actions release workflow is disabled to avoid signature mismatches.
 
@@ -79,7 +78,7 @@ For manual steps, see `.claude/skills/release/SKILL.md` or `docs/RELEASE_GUIDE.m
 | AudioManager | `Core/AudioManager.swift` | Core Audio API for volume/mute control with property listeners |
 | HTTPServer | `Core/HTTPServer.swift` | Vapor-based async HTTP server with REST endpoints |
 | SettingsManager | `Core/SettingsManager.swift` | UserDefaults persistence, legacy migration |
-| UpdateManager | `Core/UpdateManager.swift` | Sparkle auto-update integration |
+| UpdateManager | `Core/UpdateManager.swift` | Custom GitHub Releases update integration |
 | MenuBarController | `UI/MenuBarController.swift` | NSStatusItem, NSPopover, icon updates |
 | GlobalHotkeyManager | `Core/GlobalHotkeyManager.swift` | System-wide keyboard shortcuts |
 | AppDelegate | `App/AppDelegate.swift` | App lifecycle, manager initialization |
@@ -123,8 +122,7 @@ For manual steps, see `.claude/skills/release/SKILL.md` or `docs/RELEASE_GUIDE.m
 
 ## Key Files
 
-- `Package.swift` - SPM manifest (Vapor, Sparkle dependencies)
-- `appcast.xml` - Sparkle update feed
+- `Package.swift` - SPM manifest (Vapor dependency)
 
 ## Scripts
 
@@ -150,7 +148,6 @@ All detailed documentation is in `docs/`:
 ## Dependencies
 
 - **Vapor 4.89.0+**: Async HTTP server with NIO
-- **Sparkle 2.6.0+**: Auto-update framework with EdDSA signing
 
 ## macOS Requirements
 

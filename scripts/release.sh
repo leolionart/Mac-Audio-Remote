@@ -17,7 +17,7 @@ echo ""
 # ============================================================================
 # STEP 1: Pre-flight checks
 # ============================================================================
-echo -e "${BLUE}[1/9] 🔍 Pre-flight checks...${NC}"
+echo -e "${BLUE}[1/8] 🔍 Pre-flight checks...${NC}"
 
 # Check if gh is installed
 if ! command -v gh &> /dev/null; then
@@ -51,7 +51,7 @@ echo ""
 # ============================================================================
 # STEP 2: Get current version and ask for new version
 # ============================================================================
-echo -e "${BLUE}[2/9] 📝 Version management...${NC}"
+echo -e "${BLUE}[2/8] 📝 Version management...${NC}"
 
 CURRENT_VERSION=$(defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleShortVersionString)
 CURRENT_BUILD=$(defaults read "$(pwd)/AudioRemote/Resources/Info.plist" CFBundleVersion)
@@ -80,7 +80,7 @@ echo ""
 # ============================================================================
 # STEP 3: Collect release notes
 # ============================================================================
-echo -e "${BLUE}[3/9] 📋 Release notes...${NC}"
+echo -e "${BLUE}[3/8] 📋 Release notes...${NC}"
 echo "Enter release notes (one per line, empty line to finish):"
 echo "Examples:"
 echo "  ✨ New: Feature description"
@@ -108,7 +108,7 @@ echo ""
 # ============================================================================
 # STEP 4: Update Info.plist
 # ============================================================================
-echo -e "${BLUE}[4/9] 📝 Updating Info.plist...${NC}"
+echo -e "${BLUE}[4/8] 📝 Updating Info.plist...${NC}"
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEW_VERSION" "AudioRemote/Resources/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_BUILD" "AudioRemote/Resources/Info.plist"
@@ -119,7 +119,7 @@ echo ""
 # ============================================================================
 # STEP 5: Build and test
 # ============================================================================
-echo -e "${BLUE}[5/9] 🔨 Building app...${NC}"
+echo -e "${BLUE}[5/8] 🔨 Building app...${NC}"
 
 # Get script directory and run build script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -134,13 +134,12 @@ echo -e "${GREEN}✓ Build successful${NC}"
 echo ""
 
 # Quick test - check if critical files exist
-echo -e "${BLUE}[5/9] 🧪 Testing app bundle...${NC}"
+echo -e "${BLUE}[5/8] 🧪 Testing app bundle...${NC}"
 
 REQUIRED_FILES=(
     ".build/release/AudioRemote.app/Contents/MacOS/AudioRemote"
     ".build/release/AudioRemote.app/Contents/Info.plist"
     ".build/release/AudioRemote.app/Contents/Resources/AppIcon.icns"
-    ".build/release/AudioRemote.app/Contents/Frameworks/Sparkle.framework"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -156,110 +155,25 @@ echo ""
 # ============================================================================
 # STEP 6: Create ZIP archive
 # ============================================================================
-echo -e "${BLUE}[6/9] 📦 Creating ZIP archive...${NC}"
+echo -e "${BLUE}[6/8] 📦 Creating ZIP archive...${NC}"
 
 cd .build/release
 rm -f "AudioRemote-${NEW_VERSION}.zip"
 zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app > /dev/null
 
-# Sign the ZIP file with EdDSA signature for Sparkle
-echo -e "${BLUE}  Signing update with EdDSA...${NC}"
-
-# Check if sign_update exists
-SIGN_UPDATE=""
-if [ -f "../../bin/sign_update" ]; then
-    SIGN_UPDATE="../../bin/sign_update"
-elif [ -f "/tmp/bin/sign_update" ]; then
-    SIGN_UPDATE="/tmp/bin/sign_update"
-elif [ -f ".build/artifacts/sparkle/Sparkle/bin/sign_update" ]; then
-    SIGN_UPDATE=".build/artifacts/sparkle/Sparkle/bin/sign_update"
-else
-    echo -e "${YELLOW}  ⚠️  sign_update tool not found, downloading Sparkle...${NC}"
-    curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz 2>/dev/null
-    tar xf /tmp/Sparkle.tar.xz -C /tmp 2>/dev/null
-    SIGN_UPDATE="/tmp/bin/sign_update"
-fi
-
-# Get signature
-SIGNATURE_OUTPUT=$($SIGN_UPDATE "AudioRemote-${NEW_VERSION}.zip" 2>&1)
-ED_SIGNATURE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
-ZIP_SIZE=$(echo "$SIGNATURE_OUTPUT" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
+ZIP_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.zip")
 ZIP_SIZE_MB=$(echo "scale=2; $ZIP_SIZE / 1024 / 1024" | bc)
 
-if [ -z "$ED_SIGNATURE" ]; then
-    echo -e "${RED}❌ Failed to generate EdDSA signature${NC}"
-    echo "Output: $SIGNATURE_OUTPUT"
-    exit 1
-fi
-
 echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.zip (${ZIP_SIZE_MB} MB)${NC}"
-echo -e "${GREEN}✓ Signed with EdDSA${NC}"
 cd ../..
 echo ""
 
 # ============================================================================
-# STEP 7: Update appcast.xml
+# STEP 7: Git commit, tag, and push
 # ============================================================================
-echo -e "${BLUE}[7/9] 📝 Updating appcast.xml...${NC}"
+echo -e "${BLUE}[7/8] 📤 Git operations...${NC}"
 
-# Build release notes HTML
-RELEASE_NOTES_HTML="                <h2>Version ${NEW_VERSION}</h2>
-                <ul>"
-
-for item in "${RELEASE_ITEMS[@]}"; do
-    RELEASE_NOTES_HTML="${RELEASE_NOTES_HTML}
-                    <li>${item}</li>"
-done
-
-RELEASE_NOTES_HTML="${RELEASE_NOTES_HTML}
-                </ul>"
-
-# Get current date in RFC 822 format
-PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
-
-# Create new item entry
-NEW_ITEM="    <item>
-        <title>Version ${NEW_VERSION}</title>
-        <description><![CDATA[
-${RELEASE_NOTES_HTML}
-        ]]></description>
-        <pubDate>${PUBDATE}</pubDate>
-        <enclosure url=\"https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip\"
-                   sparkle:version=\"${NEW_VERSION}\"
-                   sparkle:shortVersionString=\"${NEW_VERSION}\"
-                   sparkle:edSignature=\"${ED_SIGNATURE}\"
-                   length=\"${ZIP_SIZE}\"
-                   type=\"application/octet-stream\" />
-        <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-    </item>"
-
-# Write new item to temporary file
-echo "$NEW_ITEM" > /tmp/new_appcast_item.xml
-
-# Insert new item after <language>en</language> line using awk
-awk '
-/<language>en<\/language>/ {
-    print
-    while ((getline line < "/tmp/new_appcast_item.xml") > 0) {
-        print line
-    }
-    close("/tmp/new_appcast_item.xml")
-    next
-}
-{print}
-' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
-
-rm -f /tmp/new_appcast_item.xml
-
-echo -e "${GREEN}✓ Updated appcast.xml${NC}"
-echo ""
-
-# ============================================================================
-# STEP 8: Git commit, tag, and push
-# ============================================================================
-echo -e "${BLUE}[8/9] 📤 Git operations...${NC}"
-
-git add AudioRemote/Resources/Info.plist appcast.xml
+git add AudioRemote/Resources/Info.plist
 git commit -m "chore: Release v${NEW_VERSION}
 
 $(for item in "${RELEASE_ITEMS[@]}"; do echo "- ${item}"; done)"
@@ -278,9 +192,9 @@ echo -e "${GREEN}✓ Git operations complete${NC}"
 echo ""
 
 # ============================================================================
-# STEP 9: Create GitHub Release
+# STEP 8: Create GitHub Release
 # ============================================================================
-echo -e "${BLUE}[9/9] 🚀 Creating GitHub Release...${NC}"
+echo -e "${BLUE}[8/8] 🚀 Creating GitHub Release...${NC}"
 
 # Build full release notes for GitHub
 GITHUB_RELEASE_NOTES="## 🔧 Audio Remote v${NEW_VERSION}
@@ -293,9 +207,6 @@ $(for item in "${RELEASE_ITEMS[@]}"; do echo "- ${item}"; done)
 2. Extract and move \`AudioRemote.app\` to Applications folder
 3. Launch the app - it will appear in menu bar
 4. Grant necessary permissions when prompted
-
-### Auto-Update
-If you already have Audio Remote installed, the app will automatically notify you of this update via Sparkle.
 
 ### Requirements
 - macOS 13.0 (Ventura) or later
@@ -326,11 +237,4 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 echo -e "${BLUE}🔗 Release URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}"
 echo -e "${BLUE}📦 Download URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.zip"
-echo -e "${BLUE}🔄 Appcast URL:${NC} https://raw.githubusercontent.com/leolionart/Mac-Audio-Remote/main/appcast.xml"
-echo ""
-echo -e "${YELLOW}📝 Next steps:${NC}"
-echo "1. Verify the release looks correct on GitHub"
-echo "2. Test downloading and installing the app"
-echo "3. Launch existing app and verify Sparkle auto-update detects it"
-echo "4. Check appcast.xml is accessible via the URL above"
 echo ""

@@ -1,0 +1,169 @@
+import Foundation
+
+// MARK: - Update Info
+struct UpdateInfo {
+    let version: String
+    let downloadURL: URL
+    let releaseNotes: String
+    let publishedAt: Date?
+}
+
+// MARK: - Update Check Result
+enum UpdateCheckResult {
+    case available(UpdateInfo)
+    case upToDate
+    case error(String)
+}
+
+// MARK: - Update Checker
+class UpdateChecker {
+    static let shared = UpdateChecker()
+
+    // GitHub API URL for releases
+    private let githubAPIURL = "https://api.github.com/repos/leolionart/Mac-Audio-Remote/releases"
+
+    private init() {}
+
+    /// Check for updates asynchronously
+    func checkForUpdates(completion: @escaping (UpdateCheckResult) -> Void) {
+        guard let url = URL(string: githubAPIURL) else {
+            completion(.error("Invalid API URL"))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15 // 15 seconds timeout
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.error("Network error: \(error.localizedDescription)"))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.error("Invalid response"))
+                }
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                DispatchQueue.main.async {
+                    completion(.error("Server error: \(httpResponse.statusCode)"))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.error("No data received"))
+                }
+                return
+            }
+
+            self?.parseResponse(data: data, completion: completion)
+        }
+
+        task.resume()
+    }
+
+    private func parseResponse(data: Data, completion: @escaping (UpdateCheckResult) -> Void) {
+        do {
+            // Parse as array of releases
+            guard let releases = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                DispatchQueue.main.async { completion(.error("Invalid JSON format")) }
+                return
+            }
+
+            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+
+            // Find the highest version release (not draft/prerelease)
+            var bestRelease: [String: Any]?
+            var bestVersion = ""
+
+            for release in releases {
+                guard let tagName = release["tag_name"] as? String,
+                      release["draft"] as? Bool != true,
+                      release["prerelease"] as? Bool != true else { continue }
+
+                let version = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+
+                // Compare with current best
+                if bestVersion.isEmpty {
+                    bestVersion = version
+                    bestRelease = release
+                } else {
+                    if compareVersions(version, bestVersion) == .orderedDescending {
+                        bestVersion = version
+                        bestRelease = release
+                    }
+                }
+            }
+
+            guard let release = bestRelease, !bestVersion.isEmpty else {
+                DispatchQueue.main.async { completion(.upToDate) }
+                return
+            }
+
+            // Check if update available (bestVersion > currentVersion)
+            if compareVersions(bestVersion, currentVersion) != .orderedDescending {
+                DispatchQueue.main.async { completion(.upToDate) }
+                return
+            }
+
+            // Find ZIP/DMG download URL
+            var downloadURL: URL?
+            if let assets = release["assets"] as? [[String: Any]] {
+                for asset in assets {
+                    if let name = asset["name"] as? String,
+                       (name.lowercased().hasSuffix(".zip") || name.lowercased().hasSuffix(".dmg")),
+                       let urlString = asset["browser_download_url"] as? String,
+                       let url = URL(string: urlString) {
+                        downloadURL = url
+                        // Prefer .zip if we have multiple, but take first match for now
+                        if name.lowercased().hasSuffix(".zip") {
+                            break
+                        }
+                    }
+                }
+            }
+
+            guard let finalDownloadURL = downloadURL else {
+                DispatchQueue.main.async { completion(.error("No download file found in release")) }
+                return
+            }
+
+            // Parse metadata
+            let releaseNotes = release["body"] as? String ?? ""
+            var publishedAt: Date?
+            if let publishedString = release["published_at"] as? String {
+                // ISO8601 parser
+                let formatter = ISO8601DateFormatter()
+                publishedAt = formatter.date(from: publishedString)
+            }
+
+            let updateInfo = UpdateInfo(
+                version: bestVersion,
+                downloadURL: finalDownloadURL,
+                releaseNotes: releaseNotes,
+                publishedAt: publishedAt
+            )
+
+            DispatchQueue.main.async { completion(.available(updateInfo)) }
+
+        } catch {
+            DispatchQueue.main.async {
+                completion(.error("JSON parse error: \(error.localizedDescription)"))
+            }
+        }
+    }
+
+    /// Compare two version strings
+    /// Returns: .orderedAscending if v1 < v2, .orderedSame if equal, .orderedDescending if v1 > v2
+    func compareVersions(_ v1: String, _ v2: String) -> ComparisonResult {
+        return v1.compare(v2, options: .numeric)
+    }
+}
