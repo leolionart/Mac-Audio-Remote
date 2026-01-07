@@ -2,11 +2,17 @@
 
 ## Quick Start
 
+**Fully automated** - zero input required:
+
 ```bash
-./scripts/release.sh <VERSION>
+# From Claude Code
+/release
+
+# From command line
+./scripts/release_auto.sh
 ```
 
-That's it! The script handles everything automatically.
+That's it! Everything is automatic.
 
 ## Prerequisites
 

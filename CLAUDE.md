@@ -52,17 +52,30 @@ open http://localhost:8765
 
 ## Release Process
 
-**Use the `/release` skill**:
+**Fully automated** - zero input required:
+
 ```bash
-/release <VERSION>
+# From Claude Code
+/release
+
+# From command line
+./scripts/release_auto.sh
 ```
 
-This runs `./scripts/release.sh` which automatically:
-1. Bumps version in Info.plist
-2. Builds Rust FFI + Swift app
-3. Creates DMG and ZIP
-4. Commits, tags, and pushes
-5. Creates GitHub Release
+**What it does automatically:**
+1. Auto-commits any uncommitted changes
+2. Auto-detects version bump from commit messages (MAJOR/MINOR/PATCH)
+3. Auto-generates release notes from git history
+4. Builds Rust FFI + Swift app
+5. Creates DMG and ZIP
+6. Commits, tags, and pushes
+7. Creates GitHub Release
+
+**Commit conventions for auto-versioning:**
+- `breaking:` → MAJOR bump (3.0.0)
+- `feat:` or `✨` → MINOR bump (2.8.0)
+- `fix:` or `🔧` → PATCH bump (2.7.2)
+- Others → PATCH bump
 
 **No signing or appcast.xml needed** - app uses custom GitHub Releases integration.
 
