@@ -258,7 +258,7 @@ POST http://YOUR_MAC_IP:8765/volume/toggle-mute # Mute/unmute
 GET  http://YOUR_MAC_IP:8765/status            # Get current status
 \`\`\`
 
-For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-Shortcuts-Guide.md)."
+For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-SHORTCUTS-GUIDE.md)."
 
 gh release create "v${NEW_VERSION}" \
   ".build/release/AudioRemote-${NEW_VERSION}.dmg" \
