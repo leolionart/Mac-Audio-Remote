@@ -64,6 +64,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // Check if we should reopen settings after update
+        if UserDefaults.standard.bool(forKey: "audioremote.reopenSettings") {
+            UserDefaults.standard.removeObject(forKey: "audioremote.reopenSettings")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.menuBarController?.openSettings()
+            }
+        }
+
         print("Audio Remote started successfully")
         print("Mic status: \(audioManager.isMuted ? "Muted" : "Active")")
     }

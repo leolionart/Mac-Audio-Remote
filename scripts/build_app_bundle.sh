@@ -18,6 +18,14 @@ FRAMEWORKS="$CONTENTS/Frameworks"
 echo "🧹 Cleaning old bundle..."
 rm -rf "$APP_BUNDLE"
 
+# Build Rust FFI library
+echo "🦀 Building Rust FFI library..."
+if [ -f "AudioRemote/RustFFI/build.sh" ]; then
+    ./AudioRemote/RustFFI/build.sh
+else
+    echo "⚠️  Rust FFI build script not found, skipping..."
+fi
+
 # Build release binary
 echo "🔧 Building release binary..."
 swift build -c release

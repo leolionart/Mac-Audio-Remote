@@ -24,6 +24,10 @@ let package = Package(
             path: "AudioRemote",
             resources: [
                 .copy("Resources")
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-L", "AudioRemote/RustFFI"]),
+                .linkedLibrary("audioremote_ffi")
             ]
         )
     ]

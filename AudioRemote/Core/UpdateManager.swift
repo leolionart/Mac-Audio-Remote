@@ -38,6 +38,7 @@ class UpdateManager: NSObject, ObservableObject {
 
     private var downloadTask: URLSessionDownloadTask?
     private var downloadingVersion: String?
+    private var downloadingIsDMG: Bool = false
     private var cancellables = Set<AnyCancellable>()
 
     private let autoCheckInterval: TimeInterval = 24 * 60 * 60 // 24 hours
@@ -80,6 +81,7 @@ class UpdateManager: NSObject, ObservableObject {
     func downloadUpdate(_ info: UpdateInfo) {
         state = .downloading(progress: 0)
         downloadingVersion = info.version
+        downloadingIsDMG = info.isDMG
 
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         downloadTask = session.downloadTask(with: info.downloadURL)
@@ -157,6 +159,23 @@ class UpdateManager: NSObject, ObservableObject {
         }
     }
 
+    private func installFromDMG(dmgPath: URL) {
+        state = .installing
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = self.prepareDMGInstall(dmgPath: dmgPath)
+
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let tempApp):
+                    self.relaunchWithNewApp(tempApp: tempApp)
+                case .failure(let error):
+                    self.state = .error(error)
+                }
+            }
+        }
+    }
+
     private enum InstallResult {
         case success(tempApp: String)
         case failure(error: String)
@@ -197,9 +216,97 @@ class UpdateManager: NSObject, ObservableObject {
         return .success(tempApp: sourceApp)
     }
 
+    private func prepareDMGInstall(dmgPath: URL) -> InstallResult {
+        let fileManager = FileManager.default
+
+        // Step 1: Strip quarantine from DMG
+        _ = shell("xattr -cr '\\(dmgPath.path)'")
+
+        // Step 2: Mount DMG
+        let attachOutput = shell("hdiutil attach -nobrowse '\\(dmgPath.path)'")
+        guard attachOutput.ok else {
+            return .failure(error: "Failed to mount DMG file.")
+        }
+
+        // Step 3: Parse mount point from output
+        // Output format: "/dev/disk4s2    Apple_HFS    /Volumes/AudioRemote"
+        var mountPoint: String?
+        for line in attachOutput.output.components(separatedBy: "\\n") {
+            if line.contains("/Volumes/") {
+                let components = line.components(separatedBy: "\\t").filter { !$0.isEmpty }
+                if let lastComponent = components.last {
+                    mountPoint = lastComponent.trimmingCharacters(in: .whitespaces)
+                    break
+                }
+            }
+        }
+
+        guard let volumePath = mountPoint else {
+            _ = shell("hdiutil detach '\\(dmgPath.path)' -force")
+            return .failure(error: "Could not find mount point in DMG.")
+        }
+
+        // Step 4: Find AudioRemote.app in mount
+        var appInDMG: String?
+        if let contents = try? fileManager.contentsOfDirectory(atPath: volumePath) {
+            for item in contents {
+                if item.hasSuffix(".app") {
+                    appInDMG = (volumePath as NSString).appendingPathComponent(item)
+                    break
+                }
+            }
+        }
+
+        guard let sourceApp = appInDMG else {
+            _ = shell("hdiutil detach '\\(volumePath)' -force")
+            return .failure(error: "No app bundle found in DMG.")
+        }
+
+        // Step 5: Copy to temp location
+        let tempApp = "/tmp/AudioRemote-new.app"
+        _ = shell("rm -rf '\\(tempApp)'")
+        let copyOutput = shell("cp -R '\\(sourceApp)' '\\(tempApp)'")
+        guard copyOutput.ok else {
+            _ = shell("hdiutil detach '\\(volumePath)' -force")
+            return .failure(error: "Failed to copy app from DMG.")
+        }
+
+        // Step 6: Strip quarantine from copied app
+        _ = shell("xattr -cr '\\(tempApp)'")
+
+        // Step 7: Unmount DMG
+        _ = shell("hdiutil detach '\\(volumePath)'")
+
+        return .success(tempApp: tempApp)
+    }
+
     private func relaunchWithNewApp(tempApp: String) {
         let bundlePath = Bundle.main.bundlePath
-        let script = "sleep 1 && rm -rf '\(bundlePath)' && mv '\(tempApp)' '\(bundlePath)' && open '\(bundlePath)'"
+
+        // Set flag to reopen settings after update
+        UserDefaults.standard.set(true, forKey: "audioremote.reopenSettings")
+        UserDefaults.standard.synchronize() // Force write before terminate
+
+        // Improved relaunch script with pgrep polling and triple xattr removal
+        let script = """
+        # Wait for app to terminate (poll up to 5 seconds)
+        for i in {1..10}; do
+            if ! pgrep -f "AudioRemote" > /dev/null 2>&1; then
+                break
+            fi
+            sleep 0.5
+        done
+
+        # Replace old app with new
+        rm -rf '\(bundlePath)'
+        mv '\(tempApp)' '\(bundlePath)'
+
+        # Final quarantine strip (belt and suspenders)
+        xattr -cr '\(bundlePath)'
+
+        # Launch new version
+        open '\(bundlePath)'
+        """
 
         let task = Process()
         task.launchPath = "/bin/sh"
@@ -232,14 +339,21 @@ extension UpdateManager: URLSessionDownloadDelegate {
                     didFinishDownloadingTo location: URL) {
         let tempDir = FileManager.default.temporaryDirectory
         let version = downloadingVersion ?? "latest"
-        let zipPath = tempDir.appendingPathComponent("AudioRemote-\(version).zip")
+        let fileExtension = downloadingIsDMG ? "dmg" : "zip"
+        let filePath = tempDir.appendingPathComponent("AudioRemote-\(version).\(fileExtension)")
 
         do {
-            if FileManager.default.fileExists(atPath: zipPath.path) {
-                try FileManager.default.removeItem(at: zipPath)
+            if FileManager.default.fileExists(atPath: filePath.path) {
+                try FileManager.default.removeItem(at: filePath)
             }
-            try FileManager.default.copyItem(at: location, to: zipPath)
-            install(zipPath: zipPath)
+            try FileManager.default.copyItem(at: location, to: filePath)
+
+            // Route to appropriate install method
+            if downloadingIsDMG {
+                installFromDMG(dmgPath: filePath)
+            } else {
+                install(zipPath: filePath)
+            }
         } catch {
             state = .error("Failed to save update file: \(error.localizedDescription)")
         }

@@ -6,6 +6,7 @@ struct UpdateInfo {
     let downloadURL: URL
     let releaseNotes: String
     let publishedAt: Date?
+    let isDMG: Bool
 }
 
 // MARK: - Update Check Result
@@ -114,17 +115,31 @@ class UpdateChecker {
                 return
             }
 
-            // Find ZIP/DMG download URL
+            // Find DMG/ZIP download URL (prefer DMG)
             var downloadURL: URL?
+            var isDMG = false
             if let assets = release["assets"] as? [[String: Any]] {
+                // First pass: look for DMG
                 for asset in assets {
                     if let name = asset["name"] as? String,
-                       (name.lowercased().hasSuffix(".zip") || name.lowercased().hasSuffix(".dmg")),
+                       name.lowercased().hasSuffix(".dmg"),
                        let urlString = asset["browser_download_url"] as? String,
                        let url = URL(string: urlString) {
                         downloadURL = url
-                        // Prefer .zip if we have multiple, but take first match for now
-                        if name.lowercased().hasSuffix(".zip") {
+                        isDMG = true
+                        break
+                    }
+                }
+
+                // Second pass: fallback to ZIP if no DMG found
+                if downloadURL == nil {
+                    for asset in assets {
+                        if let name = asset["name"] as? String,
+                           name.lowercased().hasSuffix(".zip"),
+                           let urlString = asset["browser_download_url"] as? String,
+                           let url = URL(string: urlString) {
+                            downloadURL = url
+                            isDMG = false
                             break
                         }
                     }
@@ -149,7 +164,8 @@ class UpdateChecker {
                 version: bestVersion,
                 downloadURL: finalDownloadURL,
                 releaseNotes: releaseNotes,
-                publishedAt: publishedAt
+                publishedAt: publishedAt,
+                isDMG: isDMG
             )
 
             DispatchQueue.main.async { completion(.available(updateInfo)) }
