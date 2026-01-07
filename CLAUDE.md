@@ -52,14 +52,23 @@ open http://localhost:8765
 
 ## Release Process
 
-Run the automated release script:
+**Use the `/release` skill** for releasing new versions:
 ```bash
-./scripts/release.sh
+# Example: Release version 2.6.0
+/release 2.6.0
 ```
 
-This handles: version bump, build, signing, appcast.xml update, git tag, and GitHub Release.
+The skill handles the complete workflow:
+1. Commit changes
+2. Bump version in Info.plist
+3. Build app bundle
+4. Create and sign ZIP with EdDSA
+5. Update appcast.xml
+6. Push, tag, and create GitHub Release
 
-For manual steps, see `docs/RELEASE_GUIDE.md`.
+**IMPORTANT**: All builds happen locally. GitHub Actions release workflow is disabled to avoid signature mismatches.
+
+For manual steps, see `.claude/skills/release/SKILL.md` or `docs/RELEASE_GUIDE.md`.
 
 ## Architecture
 

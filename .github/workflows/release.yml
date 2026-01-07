@@ -1,10 +1,14 @@
 name: Build and Release macOS App
 
+# DISABLED: Release builds happen locally to ensure EdDSA signature consistency.
+# GitHub Actions creates different signatures which break Sparkle auto-update.
+# See .claude/skills/release/SKILL.md for the correct release workflow.
+
 on:
-  push:
-    tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3
-  workflow_dispatch:  # Allows manual trigger from GitHub Actions tab
+  # push:
+  #   tags:
+  #     - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3
+  workflow_dispatch:  # Allows manual trigger from GitHub Actions tab (for testing only)
 
 permissions:
   contents: write
