@@ -107,7 +107,7 @@ class MenuBarController {
         }
     }
 
-    @objc private func openSettings() {
+    @objc func openSettings() {
         if settingsWindow == nil {
             let settingsView = SettingsView(
                 settingsManager: settingsManager,
