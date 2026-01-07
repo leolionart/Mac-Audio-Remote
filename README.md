@@ -75,7 +75,7 @@ open http://localhost:8765
 ## Support
 
 - [Issues](https://github.com/leolionart/Mac-Audio-Remote/issues) - Report bugs or request features
-- [iOS Shortcuts Guide](iOS-SHORTCUTS-GUIDE.md) - Detailed setup instructions
+- [iOS Shortcuts Guide](docs/iOS-SHORTCUTS-GUIDE.md) - Detailed setup instructions
 
 ## License
 

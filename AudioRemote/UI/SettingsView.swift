@@ -210,7 +210,7 @@ struct FeatureCard: View {
             Spacer()
 
             Button(action: {
-                if let url = URL(string: "https://github.com/leolionart/Mac-Audio-Remote/blob/main/iOS-SHORTCUTS-GUIDE.md") {
+                if let url = URL(string: "https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-SHORTCUTS-GUIDE.md") {
                     NSWorkspace.shared.open(url)
                 }
             }) {
