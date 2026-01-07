@@ -19,7 +19,7 @@
         ]]></description>
         <pubDate>Wed, 07 Jan 2026 10:58:21 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.5.0/AudioRemote-2.5.0.zip"
-                   sparkle:version="2.5.0"
+                   sparkle:version="21"
                    sparkle:shortVersionString="2.5.0"
                    sparkle:edSignature="zNwsRUayC1FYc7H9UyX9uOgtA5T0s2PyHsLcgAE/u77wSfUbIOPx6LSTsWnaAUAXzsAJLNOtb1KhFhPVHvXuDA=="
                    length="14439405"
@@ -39,7 +39,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 11:06:53 +0000</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.4.0/AudioRemote-2.4.0.zip"
-                   sparkle:version="2.4.0"
+                   sparkle:version="20"
                    sparkle:shortVersionString="2.4.0"
                    sparkle:edSignature="dxz7QEmCXwDKdgYX84ZL+dimdwpDwAszOxMhtsjwAFd8mV1Z2FTSPwovkKs/NnzrQqtVDP5B3VUb1/99LvrEDg=="
                    length="14391964"
@@ -57,7 +57,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 07:42:28 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.3.1/AudioRemote-2.3.1.zip"
-                   sparkle:version="2.3.1"
+                   sparkle:version="19"
                    sparkle:shortVersionString="2.3.1"
                    sparkle:edSignature="OErPPA0xysQjdP3NEAzjik4qT5oEu1X1SYgbwSp1k5yPNk1kPq1vqR5EXkLx1t0pAk24Zl1LB96IdO8EPtYUDw=="
                    length="14386092"
@@ -76,7 +76,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 07:17:02 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.3.0/AudioRemote-2.3.0.zip"
-                   sparkle:version="2.3.0"
+                   sparkle:version="18"
                    sparkle:shortVersionString="2.3.0"
                    sparkle:edSignature="4rua6mJPcWeJbuFcl+M4ZNjVPjRdTFp54FejoQRIPlTnvzjFzHWpkTLik8KpvSOB051c92Rfth/t49suDTzeCg=="
                    length="14379535"
@@ -99,7 +99,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 04:04:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.8/AudioRemote-2.2.8.zip"
-                   sparkle:version="2.2.8"
+                   sparkle:version="17"
                    sparkle:shortVersionString="2.2.8"
                    sparkle:edSignature="ZY+yWeQt2v9Z1fIko8juyfAWodqxClerXwvq08VKtGRloHZ37sPIZ2EohhtY/NOHaY0g8ZJtjjiEEfGBxNmLBw=="
                    length="14380216"
@@ -120,7 +120,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 02:09:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.7/AudioRemote-2.2.7.zip"
-                   sparkle:version="2.2.7"
+                   sparkle:version="16"
                    sparkle:shortVersionString="2.2.7"
                    sparkle:edSignature="17EOY7R8hrGeDDncLQA3Dgz1dWWfohN2EJEZDUfMqJNaosdapNfr6+KflUkkg28fj9mywAaxp0mQETiG4QiRCw=="
                    length="14379378"
@@ -141,7 +141,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 01:55:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.6/AudioRemote-2.2.6.zip"
-                   sparkle:version="2.2.6"
+                   sparkle:version="15"
                    sparkle:shortVersionString="2.2.6"
                    sparkle:edSignature="s20FIfLYK3GDnv1Th4/yY3FKN70jgTbIkSBu7AV8V0VU6xjmk2m2wAFHs4lUF2OE6T5f79PwL9ZMnaNy14/KCA=="
                    length="14379375"
@@ -163,7 +163,7 @@
         ]]></description>
         <pubDate>Sat, 03 Jan 2026 01:16:47 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.5/AudioRemote-2.2.5.zip"
-                   sparkle:version="2.2.5"
+                   sparkle:version="14"
                    sparkle:shortVersionString="2.2.5"
                    sparkle:edSignature="SI6wuqzktS85xUS/V2KvClriFfJ7x7NCZIKgPwSxeBU3sMNlQI8riDLzfoiHXjUQVFNNulkR0L+xCah3R4v2DA=="
                    length="14371555"
@@ -185,7 +185,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 13:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.4/AudioRemote-2.2.4.zip"
-                   sparkle:version="2.2.4"
+                   sparkle:version="13"
                    sparkle:shortVersionString="2.2.4"
                    sparkle:edSignature="uneSqpkfQ+dCoS5sHcZ+ZPzkWz0RK2FCwz6mNoHrNpP9MBWodUvzhE3H6uo6vsxS1bUwnN3bWxBq4BE5wRlVAQ=="
                    length="14290482"
@@ -205,7 +205,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 12:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.3/AudioRemote-2.2.3.zip"
-                   sparkle:version="2.2.3"
+                   sparkle:version="12"
                    sparkle:shortVersionString="2.2.3"
                    sparkle:edSignature="It+lGdtiYS+O5SNqRnY5zh7MYpQtEQR6ojanIPzrlRV3wuCRax6jl/T0zvrkE85NwlNkjsa/MLhiwRrIdXA4Cg=="
                    length="14283435"
@@ -226,7 +226,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 11:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.2/AudioRemote-2.2.2.zip"
-                   sparkle:version="2.2.2"
+                   sparkle:version="11"
                    sparkle:shortVersionString="2.2.2"
                    sparkle:edSignature="cTz140fT03Z3QpShHrS9uPdq1vMDSgZ+bU0jzXYxRlH6p/dEEq1FoQgiXiHAG5UXAE5mlpvqhFWnn8q47S0rDA=="
                    length="14283415"
@@ -249,7 +249,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 10:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.1/AudioRemote-2.2.1.zip"
-                   sparkle:version="2.2.1"
+                   sparkle:version="10"
                    sparkle:shortVersionString="2.2.1"
                    sparkle:edSignature="BEqE4RMY0th7ZiFf3PQpzNYR8R7n1TxC7AVJ5fF4+XVYi5nEqsV88T2FnnToB/YOnHUtpWJMeNunHGQTVCBtBA=="
                    length="14290950"
@@ -273,7 +273,7 @@
         ]]></description>
         <pubDate>Fri, 03 Jan 2026 09:00:00 GMT</pubDate>
         <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.2.0/AudioRemote-2.2.0.zip"
-                   sparkle:version="2.2.0"
+                   sparkle:version="9"
                    sparkle:shortVersionString="2.2.0"
                    sparkle:edSignature="8xLxHKCBDo1G1vJSDFU9Pd/tVIEElTgjdrrtzKtIAbmvRmoxkHUZjwcp5qCib97jUwcHgEhHRFcgM4xuEzPOCA=="
                    length="14290954"
@@ -293,7 +293,7 @@
             ]]></description>
             <pubDate>Fri, 03 Jan 2026 00:10:00 GMT</pubDate>
             <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.2/AudioRemote-2.1.2.zip"
-                       sparkle:version="2.1.2"
+                       sparkle:version="8"
                        sparkle:shortVersionString="2.1.2"
                        length="14253432"
                        type="application/octet-stream" />
@@ -311,7 +311,7 @@
             ]]></description>
             <pubDate>Fri, 02 Jan 2026 11:30:00 GMT</pubDate>
             <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.1/AudioRemote-2.1.1.zip"
-                       sparkle:version="2.1.1"
+                       sparkle:version="7"
                        sparkle:shortVersionString="2.1.1"
                        length="13651755"
                        type="application/octet-stream" />
@@ -330,7 +330,7 @@
             ]]></description>
             <pubDate>Fri, 02 Jan 2026 10:28:19 GMT</pubDate>
             <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.1.0/AudioRemote-2.1.0.zip"
-                       sparkle:version="2.1.0"
+                       sparkle:version="6"
                        sparkle:shortVersionString="2.1.0"
                        length="13651755"
                        type="application/octet-stream" />
@@ -349,7 +349,7 @@
             ]]></description>
             <pubDate>Fri, 02 Jan 2026 09:54:06 GMT</pubDate>
             <enclosure url="https://github.com/leolionart/Mac-Audio-Remote/releases/download/v2.0.0/AudioRemote-2.0.0.zip"
-                       sparkle:version="2.0.0"
+                       sparkle:version="5"
                        sparkle:shortVersionString="2.0.0"
                        length="13651755"
                        type="application/octet-stream" />
