@@ -308,23 +308,15 @@ class UpdateManager: NSObject, ObservableObject {
         UserDefaults.standard.set(true, forKey: "audioremote.reopenSettings")
         UserDefaults.standard.synchronize() // Force write before terminate
 
-        // Improved relaunch script with longer wait and explicit process termination
+        // Improved relaunch script with pgrep polling and triple xattr removal
         let script = """
-        # Wait for app to terminate gracefully (poll up to 10 seconds)
-        for i in {1..20}; do
+        # Wait for app to terminate (poll up to 5 seconds)
+        for i in {1..10}; do
             if ! pgrep -f "AudioRemote" > /dev/null 2>&1; then
-                echo "App terminated gracefully after $(($i * 500))ms"
                 break
             fi
             sleep 0.5
         done
-
-        # If still running, force kill (rare but possible if app hung)
-        if pgrep -f "AudioRemote" > /dev/null 2>&1; then
-            echo "App still running after 10s, force killing..."
-            pkill -9 -f "AudioRemote"
-            sleep 1
-        fi
 
         # Replace old app with new
         rm -rf '\(bundlePath)'

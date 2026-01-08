@@ -554,27 +554,13 @@ struct VolumeResponse: Content {
 
 // MARK: - Errors
 
-enum HTTPServerError: Error, LocalizedError {
+enum HTTPServerError: Error, CustomStringConvertible {
     case portNotAvailable(Int)
 
-    var errorDescription: String? {
+    var description: String {
         switch self {
         case .portNotAvailable(let port):
             return "Port \(port) is not available. Another application may be using it."
-        }
-    }
-
-    var failureReason: String? {
-        switch self {
-        case .portNotAvailable(let port):
-            return "Port \(port) is already in use."
-        }
-    }
-
-    var recoverySuggestion: String? {
-        switch self {
-        case .portNotAvailable(let port):
-            return "Please check if another instance of AudioRemote or another application is using port \(port). You may need to kill the other process first."
         }
     }
 }
