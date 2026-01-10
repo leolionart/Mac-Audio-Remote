@@ -74,6 +74,7 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/$APP_NAME"
 
 # Ad-hoc sign the app bundle to avoid Gatekeeper blocking
 echo "🔏 Ad-hoc signing app bundle..."
+xattr -cr "$APP_BUNDLE"
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "✅ Build complete!"
