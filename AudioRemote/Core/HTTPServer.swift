@@ -29,13 +29,29 @@ class HTTPServer {
     @MainActor
     func start(port: Int = 8765) async throws {
         guard !isRunning else {
+            NSLog("[HTTPServer] Already running")
             print("HTTP server already running")
             return
         }
 
+        NSLog("[HTTPServer] Starting on port %d", port)
+
         // Check if port is available
-        guard NetworkService.isPortAvailable(port: port) else {
-            throw HTTPServerError.portNotAvailable(port)
+        if !NetworkService.isPortAvailable(port: port) {
+            NSLog("[HTTPServer] Port %d not available, attempting auto-cleanup", port)
+            print("⚠️ Port \(port) is not available. Attempting auto-cleanup...")
+
+            // Try to cleanup old AudioRemote instance
+            if NetworkService.killAudioRemoteOnPort(port: port) {
+                NSLog("[HTTPServer] Auto-cleanup successful")
+                print("✅ Auto-cleanup successful. Proceeding with server startup...")
+            } else {
+                // If cleanup failed, throw error
+                NSLog("[HTTPServer] Auto-cleanup failed, throwing error")
+                throw HTTPServerError.portNotAvailable(port)
+            }
+        } else {
+            NSLog("[HTTPServer] Port %d is available", port)
         }
 
         var env = Environment.production
