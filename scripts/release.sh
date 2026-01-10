@@ -212,6 +212,12 @@ git commit -m "chore: Release v${NEW_VERSION}
 
 $(for item in "${RELEASE_ITEMS[@]}"; do echo "- ${item}"; done)"
 
+echo "📥 Pulling latest changes..."
+git pull --rebase origin main || {
+    echo -e "${RED}❌ Git pull failed. Please resolve conflicts manually.${NC}"
+    exit 1
+}
+
 git push origin main
 
 # Delete existing tag if it exists
