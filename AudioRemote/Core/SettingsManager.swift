@@ -21,7 +21,6 @@ enum MuteMode: String, Codable, CaseIterable {
 
 struct AppSettings: Codable {
     var autoStart: Bool = false
-    var notificationsEnabled: Bool = true
     var httpServerEnabled: Bool = true
     var httpPort: Int = 8765
     var requestCount: Int = 0
@@ -31,6 +30,7 @@ struct AppSettings: Codable {
     var muteMode: MuteMode = .hardwareMute
     var nullDeviceUID: String? = nil      // UID of virtual silent device (e.g., BlackHole)
     var realMicDeviceUID: String? = nil   // UID of real microphone (saved for restore)
+    var forceChannelMute: Bool = true     // Force mute all channels on null device
 }
 
 class SettingsManager: ObservableObject {
@@ -97,10 +97,6 @@ class SettingsManager: ObservableObject {
                     settings.autoStart = autoStart
                 }
 
-                if let notifications = json["notifications"] as? Bool {
-                    settings.notificationsEnabled = notifications
-                }
-
                 if let remoteAccess = json["remote_access"] as? Bool {
                     settings.httpServerEnabled = remoteAccess
                 }
@@ -118,7 +114,6 @@ class SettingsManager: ObservableObject {
 
                 print("Successfully migrated settings from Python app:")
                 print("  - Auto-start: \(settings.autoStart)")
-                print("  - Notifications: \(settings.notificationsEnabled)")
                 print("  - HTTP Server: \(settings.httpServerEnabled)")
                 print("  - Request count: \(settings.requestCount)")
             }

@@ -95,11 +95,7 @@ class MenuBarController {
         if let button = statusItem.button {
             if popover.isShown {
                 popover.performClose(nil)
-                // Stop audio level monitoring when popover closes
-                audioManager.stopInputLevelMonitoring()
             } else {
-                // Start audio level monitoring when popover opens
-                audioManager.startInputLevelMonitoring()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 // Activate app to ensure popover gets focus
                 NSApp.activate(ignoringOtherApps: true)

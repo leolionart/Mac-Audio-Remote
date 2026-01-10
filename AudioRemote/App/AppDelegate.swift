@@ -21,9 +21,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Sync settings to AudioManager
         syncSettingsToAudioManager()
 
-        // Request notification permission
-        NotificationService.shared.requestAuthorization()
-
         // Initialize update manager
         updateManager = UpdateManager()
 
@@ -118,10 +115,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         audioManager.muteMode = settingsManager.settings.muteMode
         audioManager.nullDeviceUID = settingsManager.settings.nullDeviceUID
         audioManager.realMicDeviceUID = settingsManager.settings.realMicDeviceUID
+        audioManager.forceChannelMute = settingsManager.settings.forceChannelMute
 
         print("Synced settings to AudioManager:")
         print("  - Mute mode: \(settingsManager.settings.muteMode.rawValue)")
         print("  - Null device UID: \(settingsManager.settings.nullDeviceUID ?? "not set")")
         print("  - Real mic UID: \(settingsManager.settings.realMicDeviceUID ?? "not set")")
+        print("  - Force channel mute: \(settingsManager.settings.forceChannelMute)")
     }
 }

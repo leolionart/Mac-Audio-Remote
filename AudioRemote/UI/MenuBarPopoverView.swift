@@ -23,21 +23,12 @@ struct MenuBarPopoverView: View {
             // Mic Control Section
             MicControlSection(
                 isMuted: audioManager.isMuted,
-                inputLevel: audioManager.inputLevel,
                 toggleMic: {
                     let muted = audioManager.toggle()
                     settingsManager.incrementRequestCount()
 
                     // Show HUD overlay
                     MicrophoneHUDController.shared.show(isMuted: muted)
-
-                    // Show notification if enabled
-                    if settingsManager.settings.notificationsEnabled {
-                        NotificationService.shared.showMicToggle(
-                            isMuted: muted,
-                            source: "Menu Bar"
-                        )
-                    }
                 }
             )
 
@@ -133,100 +124,6 @@ struct HeaderSection: View {
 }
 
 // MARK: - Mic Control Section
-struct MicControlSection: View {
-    let isMuted: Bool
-    let inputLevel: Float  // Real-time audio level
-    let toggleMic: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            // Title
-            HStack {
-                Text("Microphone")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-
-            // Toggle button with progress
-            Button(action: toggleMic) {
-                HStack(spacing: 12) {
-                    Image(systemName: isMuted ? "mic.slash.fill" : "mic.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-
-                    Text(isMuted ? "Unmute Microphone" : "Mute Microphone")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white)
-
-                    Spacer()
-
-                    Text("⌥M")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isMuted ?
-                              Color.red.opacity(0.8) :
-                              Color.green.opacity(0.7))
-                )
-            }
-            .buttonStyle(.plain)
-
-            // Real-time audio level indicator
-            VStack(spacing: 4) {
-                HStack {
-                    Text("Input Level")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(isMuted ? "Muted" : "\(Int(inputLevel * 100))%")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(isMuted ? .red : .secondary)
-                }
-
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        // Background
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(height: 8)
-
-                        // Level meter with gradient
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(
-                                LinearGradient(
-                                    colors: isMuted ? [Color.gray, Color.gray] : levelColors(for: inputLevel),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: geometry.size.width * CGFloat(isMuted ? 0 : inputLevel), height: 8)
-                            .animation(.easeOut(duration: 0.1), value: inputLevel)
-                    }
-                }
-                .frame(height: 8)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
-    /// Get gradient colors based on level
-    private func levelColors(for level: Float) -> [Color] {
-        if level < 0.5 {
-            return [Color.green.opacity(0.7), Color.green]
-        } else if level < 0.8 {
-            return [Color.green, Color.yellow]
-        } else {
-            return [Color.yellow, Color.red]
-        }
-    }
-}
-
 // MARK: - Volume Control Section
 struct VolumeControlSection: View {
     let volume: Float
@@ -404,6 +301,54 @@ struct FooterSection: View {
             Text("Audio Remote v\(version)")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Mic Control Section
+struct MicControlSection: View {
+    let isMuted: Bool
+    let toggleMic: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            // Title
+            HStack {
+                Text("Microphone")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+
+            // Toggle button
+            Button(action: toggleMic) {
+                HStack(spacing: 12) {
+                    Image(systemName: isMuted ? "mic.slash.fill" : "mic.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+
+                    Text(isMuted ? "Unmute Microphone" : "Mute Microphone")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Text("⌥M")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isMuted ?
+                              Color.red.opacity(0.8) :
+                              Color.green.opacity(0.7))
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

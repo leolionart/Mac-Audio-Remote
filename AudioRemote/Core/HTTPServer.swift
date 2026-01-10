@@ -123,11 +123,6 @@ class HTTPServer {
                 MicrophoneHUDController.shared.show(isMuted: muted)
             }
 
-            // Show notification if enabled
-            if self.settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showMicToggle(isMuted: muted, source: "Remote")
-            }
-
             return ToggleResponse(status: "ok", muted: muted)
         }
 
@@ -152,6 +147,17 @@ class HTTPServer {
                 currentInputDevice: self.audioManager.currentInputDeviceName,
                 realMic: realMicName
             )
+        }
+
+        // GET /devices/input
+        app.get("devices", "input") { [weak self] req throws -> [DeviceResponse] in
+            guard let self = self else {
+                throw Abort(.internalServerError, reason: "Server not initialized")
+            }
+
+            return self.audioManager.getAvailableInputDevices().map { device in
+                DeviceResponse(name: device.name, uid: device.uid)
+            }
         }
 
         // MARK: - Volume Control Endpoints
@@ -315,6 +321,67 @@ class HTTPServer {
                 status: "ok",
                 volume: currentVolume,
                 muted: (currentVolume == 0.0)
+            )
+        }
+
+        // POST /settings/null-device
+        app.post("settings", "null-device") { [weak self] req throws -> StatusResponse in
+            guard let self = self else {
+                throw Abort(.internalServerError, reason: "Server not initialized")
+            }
+
+            struct NullDeviceRequest: Content {
+                let uid: String
+                let muteMode: String?
+                let forceChannelMute: Bool?
+            }
+
+            let body = try req.content.decode(NullDeviceRequest.self)
+
+            // Validate mute mode if provided
+            if let modeString = body.muteMode {
+                guard let mode = MuteMode(rawValue: modeString) else {
+                    throw Abort(.badRequest, reason: "Invalid muteMode. Use one of: \(MuteMode.allCases.map { $0.rawValue }.joined(separator: ", "))")
+                }
+                self.settingsManager.settings.muteMode = mode
+            }
+
+            if let forceMute = body.forceChannelMute {
+                self.settingsManager.settings.forceChannelMute = forceMute
+                self.audioManager.forceChannelMute = forceMute
+            }
+
+            self.settingsManager.settings.nullDeviceUID = body.uid
+            self.settingsManager.save()
+
+            // Update audio manager state immediately
+            self.audioManager.nullDeviceUID = body.uid
+            self.audioManager.muteMode = self.settingsManager.settings.muteMode
+
+            // If currently muted via deviceSwitch and on the null device, ensure silence is injected
+            if self.audioManager.muteMode == .deviceSwitch,
+               self.audioManager.isMuted,
+               let currentUID = self.audioManager.getDeviceUID(self.audioManager.inputDeviceID) {
+                if currentUID == body.uid,
+                   let deviceID = self.audioManager.findDeviceByUID(body.uid) {
+                    self.audioManager.startSilenceInjectionIfNeeded(deviceID: deviceID)
+                }
+            }
+
+            // Return current status
+            var realMicName: String? = nil
+            if let realMicUID = self.audioManager.realMicDeviceUID,
+               let deviceID = self.audioManager.findDeviceByUID(realMicUID) {
+                realMicName = self.audioManager.getDeviceName(deviceID)
+            }
+
+            return StatusResponse(
+                muted: self.audioManager.isMuted,
+                outputVolume: self.audioManager.outputVolume,
+                outputMuted: self.audioManager.isOutputMuted,
+                muteMode: self.audioManager.muteMode.rawValue,
+                currentInputDevice: self.audioManager.currentInputDeviceName,
+                realMic: realMicName
             )
         }
 
@@ -531,6 +598,11 @@ class HTTPServer {
 }
 
 // MARK: - Response Models
+
+struct DeviceResponse: Content {
+    let name: String
+    let uid: String
+}
 
 struct ToggleResponse: Content {
     let status: String

@@ -287,11 +287,8 @@ struct MicToggleCard: View {
 
     var body: some View {
         Button(action: {
-            let muted = audioManager.toggle()
+            _ = audioManager.toggle()
             settingsManager.incrementRequestCount()
-            if settingsManager.settings.notificationsEnabled {
-                NotificationService.shared.showMicToggle(isMuted: muted, source: "Settings")
-            }
         }) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
@@ -523,28 +520,6 @@ struct SettingsSection: View {
                     .padding(.horizontal, 20)
 
                 SettingRow(
-                    icon: "bell.fill",
-                    title: "Notifications",
-                    description: "Show alerts when mic state changes",
-                    isOn: Binding(
-                        get: { settingsManager.settings.notificationsEnabled },
-                        set: { newValue in
-                            settingsManager.settings.notificationsEnabled = newValue
-                            settingsManager.save()
-
-                            // Test notification when enabled
-                            if newValue {
-                                NotificationService.shared.showInfo(message: "Notifications enabled! You'll see alerts when mic state changes.")
-                            }
-                        }
-                    )
-                )
-
-                Divider()
-                    .background(ThemeColors.border)
-                    .padding(.horizontal, 20)
-
-                SettingRow(
                     icon: "globe",
                     title: "HTTP Server",
                     description: "Enable webhook server for remote control",
@@ -663,6 +638,43 @@ struct MuteModeSettingRow: View {
                         }
                     }
                     .padding(.horizontal, 20)
+
+                    // Force Channel Mute Toggle
+                    HStack(spacing: 12) {
+                        ZStack {
+                            ThemeColors.background
+                                .frame(width: 32, height: 32)
+                                .cornerRadius(8)
+                            Image(systemName: "speaker.slash.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(ThemeColors.accentOrange)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Force Channel Mute")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white)
+                            Text("Set volume to 0% on silent device (Recommended)")
+                                .font(.system(size: 11))
+                                .foregroundColor(ThemeColors.textMuted)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: Binding(
+                            get: { settingsManager.settings.forceChannelMute },
+                            set: { newValue in
+                                settingsManager.settings.forceChannelMute = newValue
+                                audioManager.forceChannelMute = newValue
+                                settingsManager.save()
+                            }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(CustomToggleStyle())
+                        .scaleEffect(0.8)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 4)
 
                     // Help text
                     if audioManager.availableInputDevices.isEmpty {
