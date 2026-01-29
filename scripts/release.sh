@@ -10,9 +10,12 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║                 🚀 Audio Remote Release Script                 ║${NC}"
+echo -e "${BLUE}║                 🚀 MicDrop Release Script                      ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
+
+# Configuration
+BUNDLE_NAME="MicDrop"
 
 # ============================================================================
 # STEP 1: Pre-flight checks
@@ -141,7 +144,7 @@ echo -e "${BLUE}[5/8] 🔨 Building app...${NC}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/build_app_bundle.sh"
 
-if [ ! -d ".build/release/AudioRemote.app" ]; then
+if [ ! -d ".build/release/${BUNDLE_NAME}.app" ]; then
     echo -e "${RED}❌ Build failed - app bundle not found${NC}"
     exit 1
 fi
@@ -153,9 +156,9 @@ echo ""
 echo -e "${BLUE}[5/8] 🧪 Testing app bundle...${NC}"
 
 REQUIRED_FILES=(
-    ".build/release/AudioRemote.app/Contents/MacOS/AudioRemote"
-    ".build/release/AudioRemote.app/Contents/Info.plist"
-    ".build/release/AudioRemote.app/Contents/Resources/AppIcon.icns"
+    ".build/release/${BUNDLE_NAME}.app/Contents/MacOS/AudioRemote"
+    ".build/release/${BUNDLE_NAME}.app/Contents/Info.plist"
+    ".build/release/${BUNDLE_NAME}.app/Contents/Resources/AppIcon.icns"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -180,24 +183,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/create_dmg.sh"
 
 cd .build/release
-if [ ! -f "AudioRemote.dmg" ]; then
+if [ ! -f "${BUNDLE_NAME}.dmg" ]; then
     echo -e "${RED}❌ DMG creation failed${NC}"
     exit 1
 fi
 
-mv "AudioRemote.dmg" "AudioRemote-${NEW_VERSION}.dmg"
-DMG_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.dmg")
+mv "${BUNDLE_NAME}.dmg" "${BUNDLE_NAME}-${NEW_VERSION}.dmg"
+DMG_SIZE=$(stat -f%z "${BUNDLE_NAME}-${NEW_VERSION}.dmg")
 DMG_SIZE_MB=$(echo "scale=2; $DMG_SIZE / 1024 / 1024" | bc)
-echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.dmg (${DMG_SIZE_MB} MB)${NC}"
+echo -e "${GREEN}✓ Created ${BUNDLE_NAME}-${NEW_VERSION}.dmg (${DMG_SIZE_MB} MB)${NC}"
 
 # 2. Create ZIP (for auto-update compatibility)
 echo "📦 Creating ZIP archive..."
-rm -f "AudioRemote-${NEW_VERSION}.zip"
-zip -r "AudioRemote-${NEW_VERSION}.zip" AudioRemote.app > /dev/null
+rm -f "${BUNDLE_NAME}-${NEW_VERSION}.zip"
+zip -r "${BUNDLE_NAME}-${NEW_VERSION}.zip" ${BUNDLE_NAME}.app > /dev/null
 
-ZIP_SIZE=$(stat -f%z "AudioRemote-${NEW_VERSION}.zip")
+ZIP_SIZE=$(stat -f%z "${BUNDLE_NAME}-${NEW_VERSION}.zip")
 ZIP_SIZE_MB=$(echo "scale=2; $ZIP_SIZE / 1024 / 1024" | bc)
-echo -e "${GREEN}✓ Created AudioRemote-${NEW_VERSION}.zip (${ZIP_SIZE_MB} MB)${NC}"
+echo -e "${GREEN}✓ Created ${BUNDLE_NAME}-${NEW_VERSION}.zip (${ZIP_SIZE_MB} MB)${NC}"
 
 cd ../..
 echo ""
@@ -237,15 +240,15 @@ echo ""
 echo -e "${BLUE}[8/8] 🚀 Creating GitHub Release...${NC}"
 
 # Build full release notes for GitHub
-GITHUB_RELEASE_NOTES="## 🔧 Audio Remote v${NEW_VERSION}
+GITHUB_RELEASE_NOTES="## 🔧 ${BUNDLE_NAME} v${NEW_VERSION}
 
 ### What's New
 $(for item in "${RELEASE_ITEMS[@]}"; do echo "- ${item}"; done)
 
 ### Installation
-1. Download \`AudioRemote-${NEW_VERSION}.dmg\` below
+1. Download \`${BUNDLE_NAME}-${NEW_VERSION}.dmg\` below
 2. Open the DMG file
-3. Drag **AudioRemote** to the **Applications** folder
+3. Drag **${BUNDLE_NAME}** to the **Applications** folder
 4. Launch the app from Applications
 5. Grant necessary permissions when prompted
 
@@ -267,8 +270,8 @@ GET  http://YOUR_MAC_IP:8765/status            # Get current status
 For setup guide, see [iOS Shortcuts Documentation](https://github.com/leolionart/Mac-Audio-Remote/blob/main/docs/iOS-SHORTCUTS-GUIDE.md)."
 
 gh release create "v${NEW_VERSION}" \
-  ".build/release/AudioRemote-${NEW_VERSION}.dmg" \
-  ".build/release/AudioRemote-${NEW_VERSION}.zip" \
+  ".build/release/${BUNDLE_NAME}-${NEW_VERSION}.dmg" \
+  ".build/release/${BUNDLE_NAME}-${NEW_VERSION}.zip" \
   --title "v${NEW_VERSION}" \
   --notes "$GITHUB_RELEASE_NOTES"
 
@@ -278,5 +281,5 @@ echo -e "${GREEN}║                  ✅ Release v${NEW_VERSION} Complete!     
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${BLUE}🔗 Release URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/tag/v${NEW_VERSION}"
-echo -e "${BLUE}📦 Download URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/AudioRemote-${NEW_VERSION}.dmg"
+echo -e "${BLUE}📦 Download URL:${NC} https://github.com/leolionart/Mac-Audio-Remote/releases/download/v${NEW_VERSION}/${BUNDLE_NAME}-${NEW_VERSION}.dmg"
 echo ""
