@@ -5,14 +5,14 @@ import SwiftUI
 class MenuBarController {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private let audioManager: AudioManager
+    private let bridgeManager: BridgeManager
     private let settingsManager: SettingsManager
     private let updateManager: UpdateManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindow: NSWindow?
 
-    init(audioManager: AudioManager, settingsManager: SettingsManager, updateManager: UpdateManager) {
-        self.audioManager = audioManager
+    init(bridgeManager: BridgeManager, settingsManager: SettingsManager, updateManager: UpdateManager) {
+        self.bridgeManager = bridgeManager
         self.settingsManager = settingsManager
         self.updateManager = updateManager
 
@@ -33,7 +33,7 @@ class MenuBarController {
         popover.animates = true
 
         let popoverView = MenuBarPopoverView(
-            audioManager: audioManager,
+            bridgeManager: bridgeManager,
             settingsManager: settingsManager,
             openSettings: { [weak self] in
                 self?.popover.performClose(nil)
@@ -57,7 +57,7 @@ class MenuBarController {
 
     private func observeStateChanges() {
         // Observe mic state changes
-        audioManager.$isMuted
+        bridgeManager.$isMuted
             .receive(on: DispatchQueue.main)
             .sink { [weak self] muted in
                 print("isMuted changed to: \(muted)")
@@ -68,22 +68,14 @@ class MenuBarController {
 
     private func updateIcon() {
         if let button = statusItem.button {
-            // Get actual mute state (not the published property which may be stale)
-            let actualMuted: Bool
-            switch audioManager.muteMode {
-            case .hardwareMute:
-                actualMuted = audioManager.getHardwareMuteState()
-            case .volumeZero:
-                actualMuted = audioManager.getVolume() == 0.0
-            case .deviceSwitch:
-                actualMuted = audioManager.isMuted
-            }
+            // Simplified logic for bridge mode
+            let isMuted = bridgeManager.isMuted
 
             // Use SF Symbols mic icons for mute/unmute state
-            let iconName = actualMuted ? "mic.slash.fill" : "mic.fill"
+            let iconName = isMuted ? "mic.slash.fill" : "mic.fill"
             button.image = NSImage(
                 systemSymbolName: iconName,
-                accessibilityDescription: actualMuted ? "Microphone Muted" : "Microphone Active"
+                accessibilityDescription: isMuted ? "Microphone Muted" : "Microphone Active"
             )
             button.image?.isTemplate = true
         }
@@ -107,13 +99,13 @@ class MenuBarController {
         if settingsWindow == nil {
             let settingsView = SettingsView(
                 settingsManager: settingsManager,
-                audioManager: audioManager,
+                bridgeManager: bridgeManager,
                 updateManager: updateManager
             )
 
             let hostingController = NSHostingController(rootView: settingsView)
             let window = NSWindow(contentViewController: hostingController)
-            window.title = "Audio Remote Settings"
+            window.title = "MicDrop Settings"
             window.setContentSize(NSSize(width: 600, height: 500))
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.center()

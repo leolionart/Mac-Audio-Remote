@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Audio Remote</string>
+	<string>MicDrop</string>
 	<key>CFBundleExecutable</key>
 	<string>AudioRemote</string>
 	<key>CFBundleIconFile</key>
@@ -15,11 +15,11 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>AudioRemote</string>
+	<string>MicDrop</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.8.4</string>
+	<string>3.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>35</string>
 	<key>LSMinimumSystemVersion</key>

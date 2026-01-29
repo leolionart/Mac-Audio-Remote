@@ -3,70 +3,48 @@ import Vapor
 
 class HTTPServer {
     private var app: Application?
-    private let audioManager: AudioManager
+    private let bridgeManager: BridgeManager
     private let settingsManager: SettingsManager
     private var isRunning = false
     private var restartTask: Task<Void, Never>?
     private var errorCount = 0
     private let maxErrors = 3
-    private let restartDelay: UInt64 = 5_000_000_000 // 5 seconds in nanoseconds
+    private let restartDelay: UInt64 = 5_000_000_000 // 5 seconds
 
-    init(audioManager: AudioManager, settingsManager: SettingsManager) {
-        self.audioManager = audioManager
+    init(bridgeManager: BridgeManager, settingsManager: SettingsManager) {
+        self.bridgeManager = bridgeManager
         self.settingsManager = settingsManager
     }
 
     deinit {
         restartTask?.cancel()
-        // Note: Can't call async stop() in deinit, so we do synchronous shutdown
-        // This is acceptable as deinit only happens on app termination
         app?.shutdown()
         app = nil
     }
 
-    // MARK: - Public Methods
-
     @MainActor
     func start(port: Int = 8765) async throws {
-        guard !isRunning else {
-            NSLog("[HTTPServer] Already running")
-            print("HTTP server already running")
-            return
-        }
+        guard !isRunning else { return }
+        print("[HTTPServer] Starting on port \(port)")
 
-        NSLog("[HTTPServer] Starting on port %d", port)
-
-        // Check if port is available
         if !NetworkService.isPortAvailable(port: port) {
-            NSLog("[HTTPServer] Port %d not available, attempting auto-cleanup", port)
-            print("⚠️ Port \(port) is not available. Attempting auto-cleanup...")
-
-            // Try to cleanup old AudioRemote instance
-            if NetworkService.killAudioRemoteOnPort(port: port) {
-                NSLog("[HTTPServer] Auto-cleanup successful")
-                print("✅ Auto-cleanup successful. Proceeding with server startup...")
-            } else {
-                // If cleanup failed, throw error
-                NSLog("[HTTPServer] Auto-cleanup failed, throwing error")
-                throw HTTPServerError.portNotAvailable(port)
-            }
-        } else {
-            NSLog("[HTTPServer] Port %d is available", port)
+             print("⚠️ Port \(port) not available, attempting auto-cleanup...")
+             if NetworkService.killAudioRemoteOnPort(port: port) {
+                 print("✅ Cleanup successful")
+             } else {
+                 throw HTTPServerError.portNotAvailable(port)
+             }
         }
 
         var env = Environment.production
         env.arguments = ["vapor"]
-
         app = try await Application.make(env)
 
-        // Configure routes
         configureRoutes(app!)
 
-        // Bind to port
         app?.http.server.configuration.hostname = "0.0.0.0"
         app?.http.server.configuration.port = port
 
-        // Start server in background with error recovery
         Task {
             do {
                 try await app?.execute()
@@ -77,549 +55,116 @@ class HTTPServer {
         }
 
         isRunning = true
-        let localIP = NetworkService.getLocalIP()
-        print("HTTP server started on http://\(localIP):\(port)")
+        print("HTTP server started on port \(port)")
     }
 
     func stop() async {
         guard isRunning else { return }
-
         restartTask?.cancel()
-
-        // Shutdown the Vapor application asynchronously
-        do {
-            try await app?.asyncShutdown()
-        } catch {
-            print("⚠️ Warning: Error during server shutdown: \(error)")
-        }
-
-        // Wait for port to be fully released
-        let port = settingsManager.settings.httpPort
-        var attempts = 0
-        let maxAttempts = 20 // 20 attempts * 100ms = 2 seconds max wait
-
-        while !NetworkService.isPortAvailable(port: port) && attempts < maxAttempts {
-            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-            attempts += 1
-        }
-
-        if attempts >= maxAttempts {
-            print("⚠️ Warning: Port \(port) may not be fully released after \(maxAttempts * 100)ms")
-        } else if attempts > 0 {
-            print("✓ Port \(port) released after \(attempts * 100)ms")
-        }
-
+        try? await app?.asyncShutdown()
         app = nil
         isRunning = false
-        errorCount = 0 // Reset error count on manual stop
         print("HTTP server stopped")
     }
 
-    // MARK: - Private Methods
-
     private func configureRoutes(_ app: Application) {
-        // CORS middleware
         app.middleware.use(CORSMiddleware(configuration: .init(
             allowedOrigin: .all,
             allowedMethods: [.GET, .POST, .OPTIONS],
             allowedHeaders: [.accept, .authorization, .contentType, .origin]
         )))
 
-        // POST /toggle-mic
+        // MARK: - Legacy iOS Endpoints
+
         app.post("toggle-mic") { [weak self] req throws -> ToggleResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            let muted = self.audioManager.toggle()
+            guard let self = self else { throw Abort(.internalServerError) }
+            let muted = self.bridgeManager.toggle()
             self.settingsManager.incrementRequestCount()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                MicrophoneHUDController.shared.show(isMuted: muted)
-            }
-
             return ToggleResponse(status: "ok", muted: muted)
         }
 
-        // GET /status
         app.get("status") { [weak self] req throws -> StatusResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            // Get real mic name if available
-            var realMicName: String? = nil
-            if let realMicUID = self.audioManager.realMicDeviceUID,
-               let deviceID = self.audioManager.findDeviceByUID(realMicUID) {
-                realMicName = self.audioManager.getDeviceName(deviceID)
-            }
-
+            guard let self = self else { throw Abort(.internalServerError) }
             return StatusResponse(
-                muted: self.audioManager.isMuted,
-                outputVolume: self.audioManager.outputVolume,
-                outputMuted: self.audioManager.isOutputMuted,
-                muteMode: self.audioManager.muteMode.rawValue,
-                currentInputDevice: self.audioManager.currentInputDeviceName,
-                realMic: realMicName
+                muted: self.bridgeManager.isMuted,
+                outputVolume: self.bridgeManager.outputVolume,
+                outputMuted: self.bridgeManager.isOutputMuted,
+                muteMode: "bridge",
+                currentInputDevice: self.bridgeManager.currentInputDeviceName,
+                realMic: "Chrome Extension"
             )
         }
 
-        // GET /devices/input
-        app.get("devices", "input") { [weak self] req throws -> [DeviceResponse] in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
+        // MARK: - Bridge Endpoints (New)
 
-            return self.audioManager.getAvailableInputDevices().map { device in
-                DeviceResponse(name: device.name, uid: device.uid)
+        // Extension reports state change (e.g. user clicked mute in Meet UI)
+        app.post("bridge", "mic-state") { [weak self] req throws -> ToggleResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+
+            struct StateRequest: Content {
+                let muted: Bool
             }
+            let body = try req.content.decode(StateRequest.self)
+
+            self.bridgeManager.updateMicState(muted: body.muted)
+            return ToggleResponse(status: "updated", muted: body.muted)
         }
 
-        // MARK: - Volume Control Endpoints
+        // Long-polling endpoint for extension
+        app.get("bridge", "poll") { [weak self] req async throws -> BridgeEventResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
 
-        // POST /volume/increase
+            // Wait for next event (suspends request until event occurs)
+            let event = await self.bridgeManager.waitForNextEvent()
+            return BridgeEventResponse(event: event.rawValue)
+        }
+
+        // Volume endpoints (simplified)
         app.post("volume", "increase") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            let step = self.settingsManager.settings.volumeStep
-            self.audioManager.increaseOutputVolume(step)
-            self.settingsManager.incrementRequestCount()
-
-            // Get volume directly from Core Audio, not from @Published property
-            let currentVolume = self.audioManager.getOutputVolume()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                VolumeHUDController.shared.show(
-                    volume: currentVolume,
-                    isMuted: (currentVolume == 0.0)
-                )
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: currentVolume,
-                muted: (currentVolume == 0.0)
-            )
+            self?.bridgeManager.increaseOutputVolume()
+            return VolumeResponse(status: "ok", volume: self?.bridgeManager.outputVolume ?? 0, muted: false)
         }
 
-        // POST /volume/decrease
         app.post("volume", "decrease") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            let step = self.settingsManager.settings.volumeStep
-            self.audioManager.decreaseOutputVolume(step)
-            self.settingsManager.incrementRequestCount()
-
-            // Get volume directly from Core Audio, not from @Published property
-            let currentVolume = self.audioManager.getOutputVolume()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                VolumeHUDController.shared.show(
-                    volume: currentVolume,
-                    isMuted: (currentVolume == 0.0)
-                )
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: currentVolume,
-                muted: (currentVolume == 0.0)
-            )
+            self?.bridgeManager.decreaseOutputVolume()
+            return VolumeResponse(status: "ok", volume: self?.bridgeManager.outputVolume ?? 0, muted: false)
         }
 
-        // POST /volume/set
-        app.post("volume", "set") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            struct SetVolumeRequest: Content {
-                let volume: Float
-            }
-
-            let request = try req.content.decode(SetVolumeRequest.self)
-            self.audioManager.setOutputVolume(request.volume)
-            self.settingsManager.incrementRequestCount()
-
-            // Get volume directly from Core Audio, not from @Published property
-            let currentVolume = self.audioManager.getOutputVolume()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                VolumeHUDController.shared.show(
-                    volume: currentVolume,
-                    isMuted: (currentVolume == 0.0)
-                )
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: currentVolume,
-                muted: (currentVolume == 0.0)
-            )
-        }
-
-        // POST /volume/percent/:value - Set volume by value (0.0-1.0)
-        // Also accepts body with "volume" field for flexibility
-        app.post("volume", "percent", ":value") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            // Log raw request for debugging
-            let rawBody = req.body.string ?? "(empty)"
-            let pathValue = req.parameters.get("value") ?? "(none)"
-            print("📊 Volume request - Path value: '\(pathValue)', Body: '\(rawBody)'")
-
-            guard let valueString = req.parameters.get("value") else {
-                throw Abort(.badRequest, reason: "Missing value parameter")
-            }
-
-            // Handle both comma (European/VN locale) and dot decimal separators
-            let normalizedString = valueString.replacingOccurrences(of: ",", with: ".")
-
-            guard let value = Float(normalizedString) else {
-                throw Abort(.badRequest, reason: "Invalid value. Use decimal 0.0-1.0. Received: '\(valueString)'")
-            }
-
-            // Clamp to valid range
-            let clampedVolume = max(0.0, min(1.0, value))
-
-            self.audioManager.setOutputVolume(clampedVolume)
-            self.settingsManager.incrementRequestCount()
-
-            // Get volume directly from Core Audio
-            let currentVolume = self.audioManager.getOutputVolume()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                VolumeHUDController.shared.show(
-                    volume: currentVolume,
-                    isMuted: (currentVolume == 0.0)
-                )
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: currentVolume,
-                muted: (currentVolume == 0.0)
-            )
-        }
-
-        // POST /volume/toggle-mute
-        app.post("volume", "toggle-mute") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            _ = self.audioManager.toggleOutputMute()
-            self.settingsManager.incrementRequestCount()
-
-            // Get volume directly from Core Audio, not from @Published property
-            let currentVolume = self.audioManager.getOutputVolume()
-
-            // Show HUD overlay on main thread (non-blocking)
-            DispatchQueue.main.async {
-                VolumeHUDController.shared.show(
-                    volume: currentVolume,
-                    isMuted: (currentVolume == 0.0)
-                )
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: currentVolume,
-                muted: (currentVolume == 0.0)
-            )
-        }
-
-        // POST /settings/null-device
-        app.post("settings", "null-device") { [weak self] req throws -> StatusResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            struct NullDeviceRequest: Content {
-                let uid: String
-                let muteMode: String?
-                let forceChannelMute: Bool?
-            }
-
-            let body = try req.content.decode(NullDeviceRequest.self)
-
-            // Validate mute mode if provided
-            if let modeString = body.muteMode {
-                guard let mode = MuteMode(rawValue: modeString) else {
-                    throw Abort(.badRequest, reason: "Invalid muteMode. Use one of: \(MuteMode.allCases.map { $0.rawValue }.joined(separator: ", "))")
-                }
-                self.settingsManager.settings.muteMode = mode
-            }
-
-            if let forceMute = body.forceChannelMute {
-                self.settingsManager.settings.forceChannelMute = forceMute
-                self.audioManager.forceChannelMute = forceMute
-            }
-
-            self.settingsManager.settings.nullDeviceUID = body.uid
-            self.settingsManager.save()
-
-            // Update audio manager state immediately
-            self.audioManager.nullDeviceUID = body.uid
-            self.audioManager.muteMode = self.settingsManager.settings.muteMode
-
-            // If currently muted via deviceSwitch and on the null device, ensure silence is injected
-            if self.audioManager.muteMode == .deviceSwitch,
-               self.audioManager.isMuted,
-               let currentUID = self.audioManager.getDeviceUID(self.audioManager.inputDeviceID) {
-                if currentUID == body.uid,
-                   let deviceID = self.audioManager.findDeviceByUID(body.uid) {
-                    self.audioManager.startSilenceInjectionIfNeeded(deviceID: deviceID)
-                }
-            }
-
-            // Return current status
-            var realMicName: String? = nil
-            if let realMicUID = self.audioManager.realMicDeviceUID,
-               let deviceID = self.audioManager.findDeviceByUID(realMicUID) {
-                realMicName = self.audioManager.getDeviceName(deviceID)
-            }
-
-            return StatusResponse(
-                muted: self.audioManager.isMuted,
-                outputVolume: self.audioManager.outputVolume,
-                outputMuted: self.audioManager.isOutputMuted,
-                muteMode: self.audioManager.muteMode.rawValue,
-                currentInputDevice: self.audioManager.currentInputDeviceName,
-                realMic: realMicName
-            )
-        }
-
-        // GET /volume/status
-        app.get("volume", "status") { [weak self] req throws -> VolumeResponse in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            return VolumeResponse(
-                status: "ok",
-                volume: self.audioManager.outputVolume,
-                muted: self.audioManager.isOutputMuted
-            )
-        }
-
-        // GET / - Web UI
-        app.get { [weak self] req throws -> Response in
-            guard let self = self else {
-                throw Abort(.internalServerError, reason: "Server not initialized")
-            }
-
-            let localIP = NetworkService.getLocalIP()
-            let port = self.settingsManager.settings.httpPort
-            let micStatus = self.audioManager.isMuted ? "Muted 🔇" : "Active 🎤"
-            let volumePercent = Int(self.audioManager.outputVolume * 100)
-            let volumeStatus = self.audioManager.isOutputMuted ? "Muted 🔇" : "\(volumePercent)% 🔊"
-
-            let html = """
+        // Web UI
+        app.get { [weak self] req in
+            return """
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Audio Remote Server</title>
-                <style>
-                    * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        padding: 40px;
-                        text-align: center;
-                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                        color: white;
-                        min-height: 100vh;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                    }
-                    h1 {
-                        color: #10b981;
-                        font-size: 3rem;
-                        margin-bottom: 1rem;
-                    }
-                    .status {
-                        color: #10b981;
-                        font-size: 1.5rem;
-                        margin-bottom: 2rem;
-                    }
-                    .info {
-                        background: rgba(255, 255, 255, 0.1);
-                        padding: 2rem;
-                        border-radius: 12px;
-                        margin: 1rem 0;
-                        max-width: 600px;
-                    }
-                    code {
-                        background: rgba(0, 0, 0, 0.3);
-                        padding: 12px 20px;
-                        border-radius: 8px;
-                        font-size: 14px;
-                        display: inline-block;
-                        margin: 0.5rem 0;
-                        word-break: break-all;
-                    }
-                    .mic-status {
-                        font-size: 1.2rem;
-                        margin: 1rem 0;
-                        padding: 1rem;
-                        background: rgba(16, 185, 129, 0.2);
-                        border-radius: 8px;
-                    }
-                    .footer {
-                        margin-top: 2rem;
-                        color: rgba(255, 255, 255, 0.5);
-                        font-size: 0.9rem;
-                    }
-                    h2 {
-                        color: #10b981;
-                        margin: 1.5rem 0 0.5rem 0;
-                    }
-                    p {
-                        margin: 0.5rem 0;
-                        line-height: 1.6;
-                    }
-                </style>
+                <title>MicDrop Bridge</title>
+                <meta charset="utf-8">
             </head>
-            <body>
-                <h1>🎵 Audio Remote Server</h1>
-                <div class="status">✅ Running</div>
-
-                <div class="mic-status">
-                    Microphone: <strong>\(micStatus)</strong><br>
-                    Volume: <strong>\(volumeStatus)</strong>
+            <body style="font-family: system-ui; text-align: center; padding: 50px; background: #1a1a2e; color: #fff;">
+                <h1 style="color: #10b981;">MicDrop Bridge Active</h1>
+                <p>Use Chrome Extension to control Google Meet</p>
+                <div style="margin: 20px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px; display: inline-block;">
+                    <span style="font-size: 24px; font-weight: bold;">
+                        \(self?.bridgeManager.isMuted == true ? "Muted 🔇" : "Active 🎤")
+                    </span>
                 </div>
-
-                <div class="info">
-                    <h2>Microphone Control</h2>
-                    <p><strong>Toggle Microphone:</strong></p>
-                    <code>POST http://\(localIP):\(port)/toggle-mic</code>
-
-                    <p style="margin-top: 1.5rem;"><strong>Get Status:</strong></p>
-                    <code>GET http://\(localIP):\(port)/status</code>
-                </div>
-
-                <div class="info">
-                    <h2>Volume Control</h2>
-                    <p><strong>Increase Volume (+\(Int(self.settingsManager.settings.volumeStep * 100))%):</strong></p>
-                    <code>POST http://\(localIP):\(port)/volume/increase</code>
-
-                    <p style="margin-top: 1.5rem;"><strong>Decrease Volume (-\(Int(self.settingsManager.settings.volumeStep * 100))%):</strong></p>
-                    <code>POST http://\(localIP):\(port)/volume/decrease</code>
-
-                    <p style="margin-top: 1.5rem;"><strong>Set Volume (0.0-1.0):</strong></p>
-                    <code>POST http://\(localIP):\(port)/volume/set</code>
-                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Body: {"volume": 0.5}</p>
-
-                    <p style="margin-top: 1.5rem;"><strong>Set Volume by Value (0.0-1.0):</strong></p>
-                    <code>POST http://\(localIP):\(port)/volume/percent/{value}</code>
-                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Example: /volume/percent/0.75 sets volume to 75%</p>
-
-                    <p style="margin-top: 1.5rem;"><strong>Toggle Mute:</strong></p>
-                    <code>POST http://\(localIP):\(port)/volume/toggle-mute</code>
-
-                    <p style="margin-top: 1.5rem;"><strong>Get Volume Status:</strong></p>
-                    <code>GET http://\(localIP):\(port)/volume/status</code>
-                </div>
-
-                <div class="info">
-                    <h2>iOS Shortcuts Setup</h2>
-                    <p>1. Open Shortcuts app on iPhone</p>
-                    <p>2. Create new shortcut</p>
-                    <p>3. Add "Get Contents of URL" action</p>
-                    <p>4. Set URL to toggle endpoint</p>
-                    <p>5. Set method to POST</p>
-                    <p>6. Add to Home Screen for quick access</p>
-                </div>
-
-                <div class="footer">
-                    Audio Remote v2.0 - Swift Edition<br>
-                    Total Requests: \(self.settingsManager.settings.requestCount)
-                </div>
+                <p style="color: #aaa; font-size: 12px; margin-top: 40px;">MicDrop Server Running on Port \(self?.settingsManager.settings.httpPort ?? 8765)</p>
             </body>
             </html>
             """
-
-            return Response(
-                status: .ok,
-                headers: HTTPHeaders([("Content-Type", "text/html; charset=utf-8")]),
-                body: .init(string: html)
-            )
         }
     }
-
-    // MARK: - Error Recovery
 
     private func handleServerError() async {
+        // Simplified error handling
         errorCount += 1
-
-        guard errorCount <= maxErrors else {
-            print("HTTP server exceeded max error count (\(maxErrors)). Auto-restart disabled.")
-            isRunning = false
-            return
-        }
-
-        print("HTTP server error occurred (\(errorCount)/\(maxErrors)). Attempting restart in 5 seconds...")
-
-        // Cancel any existing restart task
-        restartTask?.cancel()
-
-        // Schedule restart
-        let delay = restartDelay
-        restartTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: delay)
-
-            guard !Task.isCancelled else {
-                print("Restart task cancelled")
-                return
-            }
-
-            guard let self = self else { return }
-
-            print("Restarting HTTP server...")
-
-            // Stop current server (await the async stop)
-            await self.stop()
-
-            // Attempt restart
-            do {
-                try await self.start(port: self.settingsManager.settings.httpPort)
-                await MainActor.run {
-                    self.errorCount = 0 // Reset error count on successful restart
-                    print("HTTP server restarted successfully")
-                }
-            } catch {
-                print("Failed to restart HTTP server: \(error)")
-            }
-        }
+        guard errorCount <= maxErrors else { isRunning = false; return }
+        try? await Task.sleep(nanoseconds: restartDelay)
+        await stop()
+        try? await start(port: settingsManager.settings.httpPort)
     }
 }
 
-// MARK: - Response Models
-
-struct DeviceResponse: Content {
-    let name: String
-    let uid: String
-}
-
+// Response structs
 struct ToggleResponse: Content {
     let status: String
     let muted: Bool
@@ -640,29 +185,10 @@ struct VolumeResponse: Content {
     let muted: Bool
 }
 
-// MARK: - Errors
+struct BridgeEventResponse: Content {
+    let event: String
+}
 
-enum HTTPServerError: Error, LocalizedError {
+enum HTTPServerError: Error {
     case portNotAvailable(Int)
-
-    var errorDescription: String? {
-        switch self {
-        case .portNotAvailable(let port):
-            return "Port \(port) is not available. Another application may be using it."
-        }
-    }
-
-    var failureReason: String? {
-        switch self {
-        case .portNotAvailable(let port):
-            return "Port \(port) is already in use."
-        }
-    }
-
-    var recoverySuggestion: String? {
-        switch self {
-        case .portNotAvailable(let port):
-            return "Please check if another instance of AudioRemote or another application is using port \(port). You may need to kill the other process first."
-        }
-    }
 }

@@ -1,92 +1,52 @@
-# 🎤 Audio Remote
+# 🎤 MicDrop (Chrome Extension Edition)
 
-Native macOS menu bar app for controlling microphone and speaker audio from your iPhone via Shortcuts.
+A hybrid macOS app + Chrome Extension system to control Google Meet microphone remotely (from global keyboard shortcut ⌥M or iOS Shortcuts).
 
+![Architecture](https://img.shields.io/badge/Architecture-Hybrid-blue.svg)
 ![macOS](https://img.shields.io/badge/macOS-13.0+-blue.svg)
-![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Chrome](https://img.shields.io/badge/Chrome-Extension-orange.svg)
 
-## Features
+## How it works
 
-- 🎤 Toggle microphone on/off with keyboard shortcut (⌘M)
-- 🔊 Control speaker volume (increase/decrease/mute)
-- 📱 iOS Shortcuts integration via HTTP webhooks
-- 🌐 Web interface for remote control
-- ⚡️ Ultra-fast ~1ms toggle latency
-- 🔔 Smart notifications
-- 🚀 Auto-start at login
-
-![Audio Remote Demo](https://cdn-std.droplr.net/files/acc_692205/Mixpfi)
+1. **macOS App**: Runs a local HTTP bridge server and listens for Global Hotkey (⌥M).
+2. **Chrome Extension**: Connects to the app via local HTTP bridge and controls Google Meet UI directly.
+3. **iOS Shortcuts**: Sends HTTP requests to the macOS App, which forwards them to Chrome.
 
 ## Installation
 
-1. Download `AudioRemote.dmg` from [Releases](https://github.com/leolionart/Mac-Audio-Remote/releases)
-2. Open the DMG and drag Audio Remote to Applications
-3. **First-time install only**:
+### Step 1: Install macOS App
+1. Build the app using Xcode or Swift:
    ```bash
-   # Remove quarantine flag (added by macOS when downloading)
-   xattr -c /Applications/AudioRemote.app
+   swift build -c release
    ```
-   Then launch the app normally.
-4. Grant microphone permissions when prompted
-5. Look for the microphone icon in your menu bar
+2. Run the app. It will start a local server at port 8765.
 
-**Note**: After first launch, the app can auto-update itself without this step.
+### Step 2: Install Chrome Extension
+1. Open Chrome and go to `chrome://extensions`.
+2. Enable **Developer mode** (top right).
+3. Click **Load unpacked**.
+4. Select the `chrome-extension` folder from this project.
+5. Open Google Meet and grant permissions if asked.
 
-## Quick Setup
+## Usage
 
-### Enable Remote Control
+- **Toggle Mic**: Press `Option + M` (works globally, even if Chrome is backgrounded).
+- **iOS Control**: Use Shortcuts to call `http://YOUR_MAC_IP:8765/toggle-mic`.
+- **Status**: Check the menu bar icon or Extension popup.
 
-1. Click menu bar icon → **Settings**
-2. Enable **HTTP Server**
-3. Note your webhook URL (e.g., `http://192.168.1.100:8765`)
+## API Endpoints (For iOS Shortcuts)
 
-### iOS Shortcuts
-
-1. Open **Shortcuts** app on iPhone
-2. Create new shortcut
-3. Add **"Get Contents of URL"** action
-4. Paste webhook URL: `http://YOUR_MAC_IP:8765/toggle-mic`
-5. Set method to **POST**
-6. Add to Home Screen
-
-**Pre-made shortcuts**: Download from [`shortcuts/`](shortcuts/) folder.
-
-## API Endpoints
+Same as before, backward compatible:
 
 ```bash
-# Microphone
+# Toggle Microphone (Google Meet)
 curl -X POST http://localhost:8765/toggle-mic
-curl http://localhost:8765/status
 
-# Volume
+# Volume Control (System Speaker)
 curl -X POST http://localhost:8765/volume/increase
 curl -X POST http://localhost:8765/volume/decrease
-curl -X POST http://localhost:8765/volume/toggle-mute
-
-# Set volume (0.0 to 1.0)
-curl -X POST http://localhost:8765/volume/set \
-  -H "Content-Type: application/json" \
-  -d '{"volume": 0.5}'
-
-# Web UI
-open http://localhost:8765
 ```
 
 ## Requirements
-
-- macOS 13.0 (Ventura) or later
-- Microphone permission in System Settings
-
-## Support
-
-- [Issues](https://github.com/leolionart/Mac-Audio-Remote/issues) - Report bugs or request features
-- [iOS Shortcuts Guide](docs/iOS-SHORTCUTS-GUIDE.md) - Detailed setup instructions
-
-## License
-
-MIT License - See [LICENSE](LICENSE)
-
----
-
-**Made with ❤️ for macOS users**
+- macOS 13.0+
+- Google Chrome (or Chromium-based browser)

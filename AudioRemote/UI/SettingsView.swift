@@ -16,7 +16,7 @@ private enum ThemeColors {
 
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
-    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var updateManager: UpdateManager
     @State private var localIP = NetworkService.getLocalIP()
     @State private var startTime = Date()
@@ -39,7 +39,7 @@ struct SettingsView: View {
 
                 // Stats Grid
                 StatsGrid(
-                    audioManager: audioManager,
+                    bridgeManager: bridgeManager,
                     settingsManager: settingsManager,
                     requestCount: settingsManager.settings.requestCount,
                     port: settingsManager.settings.httpPort,
@@ -55,7 +55,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
 
                 // Settings Section
-                SettingsSection(settingsManager: settingsManager, audioManager: audioManager)
+                SettingsSection(settingsManager: settingsManager, bridgeManager: bridgeManager)
                     .padding(.horizontal, 24)
 
                 // Update Section (Free Version - Opens GitHub)
@@ -138,7 +138,7 @@ struct HeaderView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Audio Remote Server")
+                    Text("MicDrop Server")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                     Text("Remote Audio Control")
@@ -241,7 +241,7 @@ struct FeatureCard: View {
 
 // MARK: - Stats Grid
 struct StatsGrid: View {
-    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var settingsManager: SettingsManager
     let requestCount: Int
     let port: Int
@@ -250,7 +250,7 @@ struct StatsGrid: View {
     var body: some View {
         HStack(spacing: 16) {
             // Interactive Mic Toggle Card
-            MicToggleCard(audioManager: audioManager, settingsManager: settingsManager)
+            MicToggleCard(bridgeManager: bridgeManager, settingsManager: settingsManager)
 
             StatCard(
                 icon: "⚡",
@@ -281,13 +281,13 @@ struct StatsGrid: View {
 
 // MARK: - Interactive Mic Toggle Card
 struct MicToggleCard: View {
-    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var settingsManager: SettingsManager
     @State private var isHovering = false
 
     var body: some View {
         Button(action: {
-            _ = audioManager.toggle()
+            _ = bridgeManager.toggle()
             settingsManager.incrementRequestCount()
         }) {
             VStack(alignment: .leading, spacing: 8) {
@@ -301,11 +301,11 @@ struct MicToggleCard: View {
                         .tracking(0.5)
                 }
 
-                Text(audioManager.isMuted ? "OFF" : "ON")
+                Text(bridgeManager.isMuted ? "OFF" : "ON")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(audioManager.isMuted ? ThemeColors.error : ThemeColors.accent)
+                    .foregroundColor(bridgeManager.isMuted ? ThemeColors.error : ThemeColors.accent)
 
-                Text(isHovering ? "click to toggle" : (audioManager.isMuted ? "muted" : "active"))
+                Text(isHovering ? "click to toggle" : (bridgeManager.isMuted ? "muted" : "active"))
                     .font(.system(size: 12))
                     .foregroundColor(isHovering ? ThemeColors.accent : ThemeColors.textMuted)
             }
@@ -324,7 +324,7 @@ struct MicToggleCard: View {
                 isHovering = hovering
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: audioManager.isMuted)
+        .animation(.easeInOut(duration: 0.2), value: bridgeManager.isMuted)
     }
 }
 
@@ -485,7 +485,7 @@ struct URLDisplayRow: View {
 // MARK: - Settings Section
 struct SettingsSection: View {
     @ObservedObject var settingsManager: SettingsManager
-    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var bridgeManager: BridgeManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -536,11 +536,8 @@ struct SettingsSection: View {
                     .background(ThemeColors.border)
                     .padding(.horizontal, 20)
 
-                // Mute Mode Section
-                MuteModeSettingRow(
-                    settingsManager: settingsManager,
-                    audioManager: audioManager
-                )
+                // Extension Status
+                ExtensionStatusRow(bridgeManager: bridgeManager)
             }
             .padding(.bottom, 20)
         }
@@ -553,210 +550,67 @@ struct SettingsSection: View {
     }
 }
 
-// MARK: - Mute Mode Setting Row
-struct MuteModeSettingRow: View {
-    @ObservedObject var settingsManager: SettingsManager
-    @ObservedObject var audioManager: AudioManager
-    @State private var showDevicePicker = false
+// MARK: - Extension Status Row
+struct ExtensionStatusRow: View {
+    @ObservedObject var bridgeManager: BridgeManager
 
     var body: some View {
         VStack(spacing: 12) {
-            // Mute Mode Picker
             HStack(spacing: 12) {
                 ZStack {
                     ThemeColors.background
                         .frame(width: 36, height: 36)
                         .cornerRadius(8)
 
-                    Image(systemName: "mic.slash.fill")
+                    Image(systemName: "puzzlepiece.extension.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(ThemeColors.accentPurple)
+                        .foregroundColor(ThemeColors.accentBlue)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Mute Mode")
+                    Text("Chrome Extension Bridge")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
-                    Text(settingsManager.settings.muteMode == .deviceSwitch
-                         ? "Switch to silent device (blocks all apps)"
-                         : "Set volume to zero (may not block all apps)")
+                    Text("Control Google Meet when Chrome is not focused")
                         .font(.system(size: 12))
                         .foregroundColor(ThemeColors.textMuted)
                 }
 
                 Spacer()
 
-                Picker("", selection: Binding(
-                    get: { settingsManager.settings.muteMode },
-                    set: { newValue in
-                        settingsManager.settings.muteMode = newValue
-                        audioManager.muteMode = newValue
-                        settingsManager.save()
-                    }
-                )) {
-                    Text("Volume").tag(MuteMode.volumeZero)
-                    Text("Device Switch").tag(MuteMode.deviceSwitch)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 200)
+                Text("ACTIVE")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(ThemeColors.accent)
+                    .cornerRadius(4)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.vertical, 16)
 
-            // Null Device Picker (only shown when deviceSwitch mode)
-            if settingsManager.settings.muteMode == .deviceSwitch {
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("Silent Device (e.g., BlackHole)")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(ThemeColors.textMuted)
-                        Spacer()
+            // Installation link
+            HStack {
+                Text("Extension not working?")
+                    .font(.system(size: 12))
+                    .foregroundColor(ThemeColors.textMuted)
 
-                        Button(action: {
-                            audioManager.refreshInputDevices()
-                        }) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 12))
-                                .foregroundColor(ThemeColors.textMuted)
-                        }
-                        .buttonStyle(.plain)
+                Button(action: {
+                    if let url = URL(string: "https://github.com/leolionart/Mac-Audio-Remote/tree/main/chrome-extension") {
+                        NSWorkspace.shared.open(url)
                     }
-                    .padding(.horizontal, 20)
-
-                    // Device List
-                    VStack(spacing: 4) {
-                        ForEach(audioManager.availableInputDevices) { device in
-                            DeviceRow(
-                                device: device,
-                                isSelected: settingsManager.settings.nullDeviceUID == device.uid,
-                                onSelect: {
-                                    settingsManager.settings.nullDeviceUID = device.uid
-                                    audioManager.nullDeviceUID = device.uid
-                                    settingsManager.save()
-                                }
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Force Channel Mute Toggle
-                    HStack(spacing: 12) {
-                        ZStack {
-                            ThemeColors.background
-                                .frame(width: 32, height: 32)
-                                .cornerRadius(8)
-                            Image(systemName: "speaker.slash.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(ThemeColors.accentOrange)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Force Channel Mute")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.white)
-                            Text("Set volume to 0% on silent device (Recommended)")
-                                .font(.system(size: 11))
-                                .foregroundColor(ThemeColors.textMuted)
-                        }
-
-                        Spacer()
-
-                        Toggle("", isOn: Binding(
-                            get: { settingsManager.settings.forceChannelMute },
-                            set: { newValue in
-                                settingsManager.settings.forceChannelMute = newValue
-                                audioManager.forceChannelMute = newValue
-                                settingsManager.save()
-                            }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(CustomToggleStyle())
-                        .scaleEffect(0.8)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 4)
-
-                    // Help text
-                    if audioManager.availableInputDevices.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(ThemeColors.accentOrange)
-                            Text("No input devices found. Click refresh or check System Preferences.")
-                                .font(.system(size: 11))
-                                .foregroundColor(ThemeColors.textMuted)
-                        }
-                        .padding(.horizontal, 20)
-                    } else if settingsManager.settings.nullDeviceUID == nil {
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(ThemeColors.accentBlue)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Select a virtual audio device (e.g., BlackHole)")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(ThemeColors.textMuted)
-                                Button(action: {
-                                    if let url = URL(string: "https://github.com/ExistentialAudio/BlackHole") {
-                                        NSWorkspace.shared.open(url)
-                                    }
-                                }) {
-                                    Text("Install BlackHole (free)")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(ThemeColors.accentBlue)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
+                }) {
+                    Text("Installation Guide")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ThemeColors.accentBlue)
                 }
-                .padding(.bottom, 8)
-            }
-        }
-        .padding(.bottom, 16)
-    }
-}
-
-// MARK: - Device Row
-struct DeviceRow: View {
-    let device: AudioInputDevice
-    let isSelected: Bool
-    let onSelect: () -> Void
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 16))
-                    .foregroundColor(isSelected ? ThemeColors.accent : ThemeColors.textMuted)
-
-                Text(device.name)
-                    .font(.system(size: 13))
-                    .foregroundColor(isSelected ? .white : ThemeColors.textSecondary)
+                .buttonStyle(.plain)
 
                 Spacer()
-
-                if device.name.lowercased().contains("blackhole") ||
-                   device.name.lowercased().contains("soundflower") ||
-                   device.name.lowercased().contains("loopback") {
-                    Text("Virtual")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(ThemeColors.accentPurple)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(ThemeColors.accentPurple.opacity(0.2))
-                        .cornerRadius(4)
-                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(isSelected ? ThemeColors.accent.opacity(0.1) : ThemeColors.background)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? ThemeColors.accent : ThemeColors.border, lineWidth: 1)
-            )
-            .cornerRadius(8)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -1065,7 +919,7 @@ struct ConnectionItem: View {
 struct FooterView: View {
     var body: some View {
         VStack(spacing: 4) {
-            Text("Audio Remote Server v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
+            Text("MicDrop v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                 .font(.system(size: 12))
                 .foregroundColor(ThemeColors.textMuted)
 

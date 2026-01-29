@@ -3,7 +3,7 @@ import Cocoa
 
 // MARK: - Menu Bar Popover View
 struct MenuBarPopoverView: View {
-    @ObservedObject var audioManager: AudioManager
+    @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var settingsManager: SettingsManager
     let openSettings: () -> Void
     let quit: () -> Void
@@ -12,7 +12,7 @@ struct MenuBarPopoverView: View {
         VStack(spacing: 0) {
             // Header with status and controls
             HeaderSection(
-                isMuted: audioManager.isMuted,
+                isMuted: bridgeManager.isMuted,
                 serverRunning: settingsManager.settings.httpServerEnabled,
                 openSettings: openSettings
             )
@@ -22,9 +22,9 @@ struct MenuBarPopoverView: View {
 
             // Mic Control Section
             MicControlSection(
-                isMuted: audioManager.isMuted,
+                isMuted: bridgeManager.isMuted,
                 toggleMic: {
-                    let muted = audioManager.toggle()
+                    let muted = bridgeManager.toggle()
                     settingsManager.incrementRequestCount()
 
                     // Show HUD overlay
@@ -37,16 +37,16 @@ struct MenuBarPopoverView: View {
 
             // Volume Control Section
             VolumeControlSection(
-                volume: audioManager.outputVolume,
-                isMuted: audioManager.isOutputMuted,
+                volume: bridgeManager.outputVolume,
+                isMuted: bridgeManager.isOutputMuted,
                 increaseVolume: {
-                    audioManager.increaseOutputVolume()
+                    bridgeManager.increaseOutputVolume()
                 },
                 decreaseVolume: {
-                    audioManager.decreaseOutputVolume()
+                    bridgeManager.decreaseOutputVolume()
                 },
                 toggleMute: {
-                    audioManager.toggleOutputMute()
+                    bridgeManager.toggleOutputMute()
                 }
             )
 
@@ -298,7 +298,7 @@ struct FooterSection: View {
             }
 
             // Version info
-            Text("Audio Remote v\(version)")
+            Text("MicDrop v\(version)")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
         }

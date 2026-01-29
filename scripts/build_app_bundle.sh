@@ -6,9 +6,10 @@ echo "🔨 Building AudioRemote.app bundle..."
 
 # Configuration
 APP_NAME="AudioRemote"
-VERSION="2.1.1"
+BUNDLE_NAME="MicDrop"
+VERSION="3.0.0"
 BUILD_DIR=".build/release"
-APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+APP_BUNDLE="$BUILD_DIR/$BUNDLE_NAME.app"
 CONTENTS="$APP_BUNDLE/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
@@ -74,11 +75,11 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/$APP_NAME"
 
 # Ad-hoc sign the app bundle to avoid Gatekeeper blocking
 echo "🔏 Ad-hoc signing app bundle..."
-xattr -cr "$APP_BUNDLE"
+find "$APP_BUNDLE" -exec xattr -c {} +
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "✅ Build complete!"
 echo "📂 App bundle: $APP_BUNDLE"
 echo ""
 echo "🚀 To run: open $APP_BUNDLE"
-echo "📦 To create distributable: cd $BUILD_DIR && zip -r AudioRemote-$VERSION.zip AudioRemote.app"
+echo "📦 To create distributable: cd $BUILD_DIR && zip -r $BUNDLE_NAME-$VERSION.zip $BUNDLE_NAME.app"

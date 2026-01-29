@@ -2,7 +2,7 @@ import Cocoa
 import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var audioManager: AudioManager!
+    var bridgeManager: BridgeManager!
     var settingsManager: SettingsManager!
     var menuBarController: MenuBarController!
     var httpServer: HTTPServer!
@@ -15,31 +15,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         // Initialize managers
-        audioManager = AudioManager()
+        bridgeManager = BridgeManager.shared
         settingsManager = SettingsManager()
-
-        // Sync settings to AudioManager
-        syncSettingsToAudioManager()
 
         // Initialize update manager
         updateManager = UpdateManager()
 
         // Setup menu bar
         menuBarController = MenuBarController(
-            audioManager: audioManager,
+            bridgeManager: bridgeManager,
             settingsManager: settingsManager,
             updateManager: updateManager
         )
 
         // Initialize HTTP server
         httpServer = HTTPServer(
-            audioManager: audioManager,
+            bridgeManager: bridgeManager,
             settingsManager: settingsManager
         )
 
         // Setup global hotkey (Option+M)
         globalHotkeyManager = GlobalHotkeyManager(
-            audioManager: audioManager,
+            bridgeManager: bridgeManager,
             settingsManager: settingsManager
         )
 
@@ -73,7 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         print("Audio Remote started successfully")
-        print("Mic status: \(audioManager.isMuted ? "Muted" : "Active")")
+        print("Mic status: \(bridgeManager.isMuted ? "Muted" : "Active")")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -108,19 +105,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
-    }
-
-    /// Sync settings from SettingsManager to AudioManager
-    private func syncSettingsToAudioManager() {
-        audioManager.muteMode = settingsManager.settings.muteMode
-        audioManager.nullDeviceUID = settingsManager.settings.nullDeviceUID
-        audioManager.realMicDeviceUID = settingsManager.settings.realMicDeviceUID
-        audioManager.forceChannelMute = settingsManager.settings.forceChannelMute
-
-        print("Synced settings to AudioManager:")
-        print("  - Mute mode: \(settingsManager.settings.muteMode.rawValue)")
-        print("  - Null device UID: \(settingsManager.settings.nullDeviceUID ?? "not set")")
-        print("  - Real mic UID: \(settingsManager.settings.realMicDeviceUID ?? "not set")")
-        print("  - Force channel mute: \(settingsManager.settings.forceChannelMute)")
     }
 }

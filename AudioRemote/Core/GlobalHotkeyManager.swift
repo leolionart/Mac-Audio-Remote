@@ -2,13 +2,13 @@ import Cocoa
 import Carbon
 
 class GlobalHotkeyManager {
-    private let audioManager: AudioManager
+    private let bridgeManager: BridgeManager
     private let settingsManager: SettingsManager
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
 
-    init(audioManager: AudioManager, settingsManager: SettingsManager) {
-        self.audioManager = audioManager
+    init(bridgeManager: BridgeManager, settingsManager: SettingsManager) {
+        self.bridgeManager = bridgeManager
         self.settingsManager = settingsManager
 
         registerGlobalHotKey()
@@ -62,7 +62,7 @@ class GlobalHotkeyManager {
     }
 
     private func handleHotKeyPress() {
-        let muted = audioManager.toggle()
+        let muted = bridgeManager.toggle()
         settingsManager.incrementRequestCount()
 
         // Show HUD overlay on main thread
