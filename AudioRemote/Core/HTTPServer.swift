@@ -80,6 +80,12 @@ class HTTPServer {
             guard let self = self else { throw Abort(.internalServerError) }
             let muted = self.bridgeManager.toggle()
             self.settingsManager.incrementRequestCount()
+
+            // Show HUD overlay on main thread
+            DispatchQueue.main.async {
+                MicrophoneHUDController.shared.show(isMuted: muted)
+            }
+
             return ToggleResponse(status: "ok", muted: muted)
         }
 
