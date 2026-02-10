@@ -34,8 +34,13 @@ open Package.swift
 ## Testing HTTP Server
 
 ```bash
-# Microphone control
+# Microphone control (with confirmation - waits for Chrome Extension)
 curl -X POST http://localhost:8765/toggle-mic
+
+# Microphone control (fast mode - no waiting)
+curl -X POST http://localhost:8765/toggle-mic/fast
+
+# Check status
 curl http://localhost:8765/status
 
 # Volume control
@@ -48,6 +53,9 @@ curl -X POST http://localhost:8765/volume/set -H "Content-Type: application/json
 
 # Web UI
 open http://localhost:8765
+
+# Test confirmation flow
+./scripts/test_confirmation.sh
 ```
 
 ## Release Process
@@ -114,7 +122,7 @@ gh release delete-asset vX.X.X AudioRemote-X.X.X.dmg --yes
 
 | Component | File | Responsibility |
 |-----------|------|----------------|
-| AudioManager | `Core/AudioManager.swift` | Core Audio API for volume/mute control with property listeners |
+| BridgeManager | `Core/BridgeManager.swift` | Chrome Extension bridge with confirmation pattern |
 | HTTPServer | `Core/HTTPServer.swift` | Vapor-based async HTTP server with REST endpoints |
 | SettingsManager | `Core/SettingsManager.swift` | UserDefaults persistence, legacy migration |
 | UpdateManager | `Core/UpdateManager.swift` | Custom GitHub Releases update integration |
@@ -126,9 +134,36 @@ gh release delete-asset vX.X.X AudioRemote-X.X.X.dmg --yes
 
 1. `AudioRemoteApp` → `AppDelegate.applicationDidFinishLaunching`
 2. `NSApp.setActivationPolicy(.accessory)` (hide dock icon)
-3. Initialize managers: AudioManager → SettingsManager → UpdateManager → MenuBarController → HTTPServer
+3. Initialize managers: BridgeManager → SettingsManager → UpdateManager → MenuBarController → HTTPServer
 4. Start HTTP server if enabled in settings
 5. Set up Combine publishers for reactive updates
+
+### Chrome Extension Bridge Architecture
+
+**MicDrop now operates as a bridge between iOS Shortcuts and Chrome Extension:**
+
+```
+iOS Shortcuts → MicDrop Server → Chrome Extension → Google Meet
+                      ↑                    ↓
+                      └─── Confirmation ───┘
+```
+
+**Confirmation Pattern:**
+- `/toggle-mic` (default): Waits for Chrome Extension to confirm successful mute (3s timeout)
+- `/toggle-mic/fast`: Legacy optimistic toggle (no waiting)
+- Extension polls `/bridge/poll` for events (long-polling)
+- Extension POSTs actual state to `/bridge/mic-state` after mute
+
+**Key Benefits:**
+- ✅ Guarantees mute actually happened in Google Meet
+- ✅ Returns timeout if extension not running
+- ✅ Syncs actual state from Meet UI, not assumed state
+- ✅ ~100ms latency with confirmation vs ~1ms fast mode
+
+**Documentation:**
+- Full guide: `docs/EXTENSION_INTEGRATION.md`
+- Example extension: `examples/chrome-extension/`
+- Test script: `scripts/test_confirmation.sh`
 
 ### State Management
 
@@ -149,8 +184,11 @@ gh release delete-asset vX.X.X AudioRemote-X.X.X.dmg --yes
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/toggle-mic` | Toggle microphone mute |
+| POST | `/toggle-mic` | Toggle microphone (waits for extension confirmation, 3s timeout) |
+| POST | `/toggle-mic/fast` | Toggle microphone (legacy optimistic, no waiting) |
 | GET | `/status` | Get mic status |
+| POST | `/bridge/mic-state` | Extension reports actual mute state (confirmation) |
+| GET | `/bridge/poll` | Long-polling endpoint for extension to receive events |
 | POST | `/volume/increase` | Increase speaker volume |
 | POST | `/volume/decrease` | Decrease speaker volume |
 | POST | `/volume/set` | Set volume (JSON: `{"volume": 0.5}`) |

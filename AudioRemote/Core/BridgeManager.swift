@@ -46,6 +46,10 @@ class BridgeManager: ObservableObject {
     private var eventContinuations: [CheckedContinuation<BridgeEvent, Never>] = []
     private let eventQueue = DispatchQueue(label: "com.audioremote.bridge.events")
 
+    // MARK: - Confirmation Handling
+    private var confirmationContinuations: [UUID: CheckedContinuation<Bool, Never>] = [:]
+    private let confirmationQueue = DispatchQueue(label: "com.audioremote.bridge.confirmations")
+
     init() {
         print("BridgeManager initialized - operating in Chrome Extension Bridge mode")
         // Initialize mock devices list for UI
@@ -57,7 +61,7 @@ class BridgeManager: ObservableObject {
 
     // MARK: - Public Methods
 
-    /// Toggle microphone mute state
+    /// Toggle microphone mute state (legacy - no confirmation)
     @discardableResult
     func toggle() -> Bool {
         // Optimistic update
@@ -73,13 +77,61 @@ class BridgeManager: ObservableObject {
         return newState
     }
 
+    /// Toggle microphone with confirmation from extension
+    /// - Parameter timeout: Timeout in seconds (default 3)
+    /// - Returns: True if successfully muted, false on timeout
+    func toggleWithConfirmation(timeout: TimeInterval = 3.0) async -> Bool {
+        let requestId = UUID()
+        let expectedState = !isMuted
+
+        // Create confirmation continuation BEFORE broadcasting
+        let confirmation = await withCheckedContinuation { continuation in
+            confirmationQueue.sync {
+                confirmationContinuations[requestId] = continuation
+            }
+
+            // Broadcast event
+            broadcast(event: expectedState ? .muteMic : .unmuteMic)
+            broadcast(event: .toggleMic)
+
+            // Set timeout
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                confirmationQueue.sync {
+                    if let cont = confirmationContinuations.removeValue(forKey: requestId) {
+                        print("⚠️ Confirmation timeout for request \(requestId)")
+                        cont.resume(returning: false)
+                    }
+                }
+            }
+        }
+
+        return confirmation
+    }
+
     /// Called when extension reports actual state change
-    func updateMicState(muted: Bool) {
+    /// - Parameter muted: The actual mute state from extension
+    /// - Returns: True if this was a confirmation response
+    @discardableResult
+    func updateMicState(muted: Bool) -> Bool {
         DispatchQueue.main.async { [weak self] in
             self?.isMuted = muted
             self?.currentVolume = muted ? 0.0 : 1.0
             print("Bridge state updated: \(muted ? "Muted" : "Unmuted")")
         }
+
+        // Resume any waiting confirmations
+        var resumedAny = false
+        confirmationQueue.sync {
+            for (id, continuation) in confirmationContinuations {
+                print("✅ Confirmation received for request \(id)")
+                continuation.resume(returning: true)
+                resumedAny = true
+            }
+            confirmationContinuations.removeAll()
+        }
+
+        return resumedAny
     }
 
     func setOutputVolume(_ volume: Float32) {

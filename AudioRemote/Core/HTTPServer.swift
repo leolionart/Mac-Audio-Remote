@@ -76,7 +76,32 @@ class HTTPServer {
 
         // MARK: - Legacy iOS Endpoints
 
-        app.post("toggle-mic") { [weak self] req throws -> ToggleResponse in
+        // POST /toggle-mic - Toggle with confirmation (waits for extension)
+        app.post("toggle-mic") { [weak self] req async throws -> ToggleResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+
+            // Wait for extension confirmation (3 second timeout)
+            let success = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
+            let muted = self.bridgeManager.isMuted
+
+            if success {
+                self.settingsManager.incrementRequestCount()
+
+                // Show HUD overlay on main thread
+                DispatchQueue.main.async {
+                    MicrophoneHUDController.shared.show(isMuted: muted)
+                }
+
+                return ToggleResponse(status: "ok", muted: muted)
+            } else {
+                // Timeout - extension didn't respond
+                print("⚠️ Extension confirmation timeout")
+                return ToggleResponse(status: "timeout", muted: muted)
+            }
+        }
+
+        // POST /toggle-mic/fast - Legacy optimistic toggle (no waiting)
+        app.post("toggle-mic", "fast") { [weak self] req throws -> ToggleResponse in
             guard let self = self else { throw Abort(.internalServerError) }
             let muted = self.bridgeManager.toggle()
             self.settingsManager.incrementRequestCount()
