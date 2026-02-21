@@ -47,7 +47,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Observe settings changes to restart/stop server
+        // dropFirst() skips the initial emission from @Published to prevent double-start
         settingsManager.$settings
+            .dropFirst()
             .sink { [weak self] settings in
                 guard let self = self else { return }
 

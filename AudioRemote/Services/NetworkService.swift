@@ -50,13 +50,15 @@ class NetworkService {
 
     static func isPortAvailable(port: Int) -> Bool {
         let socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-        guard socketFD != -1 else {
-            return false
-        }
+        guard socketFD != -1 else { return false }
+        defer { close(socketFD) }
 
-        defer {
-            close(socketFD)
-        }
+        // SO_REUSEADDR: allows binding a port that is in TIME_WAIT state (e.g. after
+        // previous server instance exited). This mirrors what Vapor/NIO does internally,
+        // so our check correctly reflects whether Vapor can actually bind the port.
+        // Note: this does NOT allow stealing a port from an active LISTEN socket.
+        var reuse: Int32 = 1
+        setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
 
         var addr = sockaddr_in()
         addr.sin_family = sa_family_t(AF_INET)
