@@ -43,6 +43,11 @@ class BridgeManager: ObservableObject {
     var realMicDeviceUID: String?
     var forceChannelMute: Bool = true
 
+    // MARK: - Extension Connection Status
+    /// True when Chrome Extension is actively long-polling /bridge/poll
+    @Published var isExtensionConnected: Bool = false
+    private var disconnectWorkItem: DispatchWorkItem?
+
     // MARK: - Event Handling
     private var eventContinuations: [CheckedContinuation<BridgeEvent, Never>] = []
     private let eventQueue = DispatchQueue(label: "com.audioremote.bridge.events")
@@ -188,15 +193,36 @@ class BridgeManager: ObservableObject {
             }
             eventContinuations.removeAll()
         }
+        // After broadcast, extension will reconnect shortly.
+        // If no reconnect within 5s, mark as disconnected.
+        scheduleExtensionDisconnect(after: 5.0)
     }
 
     /// Wait for next event (Async Long-polling)
     func waitForNextEvent() async -> BridgeEvent {
+        // Extension is connecting — cancel any pending disconnect timer
+        disconnectWorkItem?.cancel()
+        disconnectWorkItem = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.isExtensionConnected = true
+        }
+
         return await withCheckedContinuation { continuation in
             eventQueue.async { [weak self] in
                 self?.eventContinuations.append(continuation)
             }
         }
+    }
+
+    private func scheduleExtensionDisconnect(after seconds: TimeInterval) {
+        disconnectWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            DispatchQueue.main.async {
+                self?.isExtensionConnected = false
+            }
+        }
+        disconnectWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: item)
     }
 
     // MARK: - Server Lifecycle
@@ -214,6 +240,13 @@ class BridgeManager: ObservableObject {
             }
             confirmationContinuations.removeAll()
         }
+
+        // Mark extension as disconnected immediately on server stop
+        disconnectWorkItem?.cancel()
+        DispatchQueue.main.async { [weak self] in
+            self?.isExtensionConnected = false
+        }
+
         print("🔄 BridgeManager: all pending continuations cancelled")
     }
 

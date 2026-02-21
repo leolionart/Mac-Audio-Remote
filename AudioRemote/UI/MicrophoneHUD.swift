@@ -22,6 +22,7 @@ class MicrophoneHUDWindow: NSWindow {
 
 struct MicrophoneHUDView: View {
     let isMuted: Bool
+    var warning: String? = nil
 
     var body: some View {
         VStack(spacing: 12) {
@@ -30,11 +31,27 @@ struct MicrophoneHUDView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.white)
 
-            // Status text - use fixedSize to prevent truncation
+            // Status text
             Text(isMuted ? "Mic Muted" : "Mic Active")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
                 .fixedSize(horizontal: true, vertical: false)
+
+            // Optional warning
+            if let warning = warning {
+                Divider()
+                    .background(Color.white.opacity(0.3))
+
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                    Text(warning)
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+            }
         }
         .padding(24)
         .background(
@@ -42,7 +59,7 @@ struct MicrophoneHUDView: View {
                 .fill(Color.black.opacity(0.75))
                 .shadow(color: .black.opacity(0.3), radius: 10)
         )
-        .fixedSize()  // Allow view to size to content
+        .fixedSize()
     }
 }
 
@@ -55,8 +72,8 @@ class MicrophoneHUDController: ObservableObject {
 
     private init() {}
 
-    func show(isMuted: Bool) {
-        NSLog("🎤 MicrophoneHUD: Showing HUD - isMuted: \(isMuted)")
+    func show(isMuted: Bool, warning: String? = nil) {
+        NSLog("🎤 MicrophoneHUD: Showing HUD - isMuted: \(isMuted), warning: \(warning ?? "none")")
 
         // Cancel any existing hide task
         hideTask?.cancel()
@@ -67,7 +84,7 @@ class MicrophoneHUDController: ObservableObject {
             NSLog("🎤 MicrophoneHUD: Created new window")
         }
 
-        let contentView = MicrophoneHUDView(isMuted: isMuted)
+        let contentView = MicrophoneHUDView(isMuted: isMuted, warning: warning)
         let hostingView = NSHostingView(rootView: contentView)
         window?.contentView = hostingView
 

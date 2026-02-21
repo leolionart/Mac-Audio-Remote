@@ -14,6 +14,7 @@ struct MenuBarPopoverView: View {
             HeaderSection(
                 isMuted: bridgeManager.isMuted,
                 serverRunning: settingsManager.settings.httpServerEnabled,
+                extensionConnected: bridgeManager.isExtensionConnected,
                 openSettings: openSettings
             )
 
@@ -23,12 +24,13 @@ struct MenuBarPopoverView: View {
             // Mic Control Section
             MicControlSection(
                 isMuted: bridgeManager.isMuted,
+                extensionConnected: bridgeManager.isExtensionConnected,
                 toggleMic: {
                     let muted = bridgeManager.toggle()
                     settingsManager.incrementRequestCount()
 
-                    // Show HUD overlay
-                    MicrophoneHUDController.shared.show(isMuted: muted)
+                    let warning: String? = bridgeManager.isExtensionConnected ? nil : "No meeting app active"
+                    MicrophoneHUDController.shared.show(isMuted: muted, warning: warning)
                 }
             )
 
@@ -68,6 +70,7 @@ struct MenuBarPopoverView: View {
 struct HeaderSection: View {
     let isMuted: Bool
     let serverRunning: Bool
+    let extensionConnected: Bool
     let openSettings: () -> Void
 
     var body: some View {
@@ -88,6 +91,22 @@ struct HeaderSection: View {
             )
 
             Spacer()
+
+            // Extension connection status
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(extensionConnected ? Color.green : Color.orange)
+                    .frame(width: 6, height: 6)
+                Text(extensionConnected ? "Meet" : "No App")
+                    .font(.system(size: 11))
+                    .foregroundColor(extensionConnected ? .secondary : .orange)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(extensionConnected ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
+            )
 
             // Server status
             HStack(spacing: 4) {
@@ -310,16 +329,27 @@ struct FooterSection: View {
 // MARK: - Mic Control Section
 struct MicControlSection: View {
     let isMuted: Bool
+    let extensionConnected: Bool
     let toggleMic: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
-            // Title
+            // Title row
             HStack {
                 Text("Microphone")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
+                if !extensionConnected {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.orange)
+                        Text("No meeting app")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
+                }
             }
 
             // Toggle button
@@ -349,6 +379,19 @@ struct MicControlSection: View {
                 )
             }
             .buttonStyle(.plain)
+
+            // Extension not connected hint
+            if !extensionConnected {
+                HStack(spacing: 6) {
+                    Image(systemName: "safari")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text("Open Google Meet in Chrome to sync state")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

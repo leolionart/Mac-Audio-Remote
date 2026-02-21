@@ -101,24 +101,32 @@ class HTTPServer {
         app.post("toggle-mic") { [weak self] req async throws -> ToggleResponse in
             guard let self = self else { throw Abort(.internalServerError) }
 
+            // Record whether extension was connected before toggling
+            let extensionWasConnected = self.bridgeManager.isExtensionConnected
+
             // Wait for extension confirmation (3 second timeout)
-            let confirmed = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
+            let toggleResult = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
             let muted = self.bridgeManager.isMuted
 
+            // confirmed = true only if extension was connected AND it responded
+            let confirmed = extensionWasConnected && toggleResult
+            let source = confirmed ? "extension" : "local"
+
             if !confirmed {
-                print("⚠️ Extension confirmation timeout — toggle still applied optimistically")
+                print("⚠️ Toggle applied locally — extension \(extensionWasConnected ? "timeout" : "not connected")")
             }
 
             self.settingsManager.incrementRequestCount()
 
-            // Show HUD overlay on main thread
+            // Show HUD on main thread
             DispatchQueue.main.async {
-                MicrophoneHUDController.shared.show(isMuted: muted)
+                let warning: String? = confirmed ? nil
+                    : (extensionWasConnected ? "Extension didn't respond" : "No meeting app active")
+                MicrophoneHUDController.shared.show(isMuted: muted, warning: warning)
             }
 
-            // Always return "ok" — the toggle was applied regardless of extension confirmation.
-            // Extension confirmation is best-effort; iOS Shortcuts should not fail on timeout.
-            return ToggleResponse(status: "ok", muted: muted)
+            // Always return "ok" — toggle was applied regardless of extension confirmation.
+            return ToggleResponse(status: "ok", muted: muted, confirmed: confirmed, source: source)
         }
 
         // POST /toggle-mic/fast - Legacy optimistic toggle (no waiting)
@@ -132,7 +140,7 @@ class HTTPServer {
                 MicrophoneHUDController.shared.show(isMuted: muted)
             }
 
-            return ToggleResponse(status: "ok", muted: muted)
+            return ToggleResponse(status: "ok", muted: muted, confirmed: false, source: "local")
         }
 
         app.get("status") { [weak self] req throws -> StatusResponse in
@@ -159,7 +167,7 @@ class HTTPServer {
             let body = try req.content.decode(StateRequest.self)
 
             self.bridgeManager.updateMicState(muted: body.muted)
-            return ToggleResponse(status: "updated", muted: body.muted)
+            return ToggleResponse(status: "updated", muted: body.muted, confirmed: true, source: "extension")
         }
 
         // Long-polling endpoint for extension
@@ -236,6 +244,8 @@ class HTTPServer {
 struct ToggleResponse: Content {
     let status: String
     let muted: Bool
+    let confirmed: Bool   // true = Chrome Extension confirmed the action in meeting app
+    let source: String    // "extension" or "local"
 }
 
 struct StatusResponse: Content {
