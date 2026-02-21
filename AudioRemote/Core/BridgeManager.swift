@@ -82,6 +82,16 @@ class BridgeManager: ObservableObject {
     /// - Parameter timeout: Timeout in seconds (default 3)
     /// - Returns: True if successfully muted, false on timeout
     func toggleWithConfirmation(timeout: TimeInterval = 3.0) async -> Bool {
+        // Fast path: if no extension is currently polling, do immediate toggle
+        // This prevents iOS Shortcuts from getting a 3-second wait + "timeout" response
+        var hasActiveListeners = false
+        eventQueue.sync { hasActiveListeners = !eventContinuations.isEmpty }
+
+        if !hasActiveListeners {
+            _ = toggle()
+            return true
+        }
+
         let requestId = UUID()
         let expectedState = !isMuted
 
