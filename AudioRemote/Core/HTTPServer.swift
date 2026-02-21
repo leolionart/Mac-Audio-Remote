@@ -97,28 +97,28 @@ class HTTPServer {
 
         // MARK: - Legacy iOS Endpoints
 
-        // POST /toggle-mic - Toggle with confirmation (waits for extension)
+        // POST /toggle-mic - Toggle with confirmation (waits for extension if connected)
         app.post("toggle-mic") { [weak self] req async throws -> ToggleResponse in
             guard let self = self else { throw Abort(.internalServerError) }
 
             // Wait for extension confirmation (3 second timeout)
-            let success = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
+            let confirmed = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
             let muted = self.bridgeManager.isMuted
 
-            if success {
-                self.settingsManager.incrementRequestCount()
-
-                // Show HUD overlay on main thread
-                DispatchQueue.main.async {
-                    MicrophoneHUDController.shared.show(isMuted: muted)
-                }
-
-                return ToggleResponse(status: "ok", muted: muted)
-            } else {
-                // Timeout - extension didn't respond
-                print("⚠️ Extension confirmation timeout")
-                return ToggleResponse(status: "timeout", muted: muted)
+            if !confirmed {
+                print("⚠️ Extension confirmation timeout — toggle still applied optimistically")
             }
+
+            self.settingsManager.incrementRequestCount()
+
+            // Show HUD overlay on main thread
+            DispatchQueue.main.async {
+                MicrophoneHUDController.shared.show(isMuted: muted)
+            }
+
+            // Always return "ok" — the toggle was applied regardless of extension confirmation.
+            // Extension confirmation is best-effort; iOS Shortcuts should not fail on timeout.
+            return ToggleResponse(status: "ok", muted: muted)
         }
 
         // POST /toggle-mic/fast - Legacy optimistic toggle (no waiting)
