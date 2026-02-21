@@ -61,10 +61,22 @@ class HTTPServer {
     func stop() async {
         guard isRunning else { return }
         restartTask?.cancel()
+        // Cancel all pending long-poll and confirmation continuations first
+        // so Vapor's asyncShutdown() doesn't hang waiting for in-flight requests
+        bridgeManager.cancelAllPending()
+        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms grace period
         try? await app?.asyncShutdown()
         app = nil
         isRunning = false
         print("HTTP server stopped")
+    }
+
+    @MainActor
+    func restart() async {
+        let port = settingsManager.settings.httpPort
+        print("[HTTPServer] Restarting on port \(port)...")
+        await stop()
+        try? await start(port: port)
     }
 
     private func configureRoutes(_ app: Application) {
@@ -150,6 +162,22 @@ class HTTPServer {
             return BridgeEventResponse(event: event.rawValue)
         }
 
+        // MARK: - Server Control
+
+        // POST /restart - Gracefully restart the HTTP server
+        // Responds immediately then restarts after 500ms to ensure response is delivered
+        app.post("restart") { [weak self] req async throws -> RestartResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+            print("[HTTPServer] /restart endpoint called")
+
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 500_000_000) // 500ms so response is sent first
+                await self?.restart()
+            }
+
+            return RestartResponse(status: "restarting", message: "HTTP server will restart in 500ms")
+        }
+
         // Volume endpoints (simplified)
         app.post("volume", "increase") { [weak self] req throws -> VolumeResponse in
             self?.bridgeManager.increaseOutputVolume()
@@ -218,6 +246,11 @@ struct VolumeResponse: Content {
 
 struct BridgeEventResponse: Content {
     let event: String
+}
+
+struct RestartResponse: Content {
+    let status: String
+    let message: String
 }
 
 enum HTTPServerError: Error {

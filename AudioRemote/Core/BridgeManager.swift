@@ -9,6 +9,7 @@ enum BridgeEvent: String, Codable {
     case toggleSpeaker = "toggle-speaker"
     case volumeUp = "volume-up"
     case volumeDown = "volume-down"
+    case serverRestart = "server-restart"
 }
 
 /// Represents an audio input device (simplified for backward compat)
@@ -186,6 +187,24 @@ class BridgeManager: ObservableObject {
                 self?.eventContinuations.append(continuation)
             }
         }
+    }
+
+    // MARK: - Server Lifecycle
+
+    /// Cancel all pending long-poll and confirmation continuations.
+    /// Call this before restarting the HTTP server to allow clean shutdown.
+    func cancelAllPending() {
+        // Drain long-poll connections by broadcasting server-restart event
+        broadcast(event: .serverRestart)
+
+        // Cancel any pending confirmation waits
+        confirmationQueue.sync {
+            for (_, continuation) in confirmationContinuations {
+                continuation.resume(returning: false)
+            }
+            confirmationContinuations.removeAll()
+        }
+        print("🔄 BridgeManager: all pending continuations cancelled")
     }
 
     // MARK: - Deprecated/Compat Methods
