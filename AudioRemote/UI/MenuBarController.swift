@@ -8,13 +8,15 @@ class MenuBarController {
     private let bridgeManager: BridgeManager
     private let settingsManager: SettingsManager
     private let updateManager: UpdateManager
+    private let httpServer: HTTPServer
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindow: NSWindow?
 
-    init(bridgeManager: BridgeManager, settingsManager: SettingsManager, updateManager: UpdateManager) {
+    init(bridgeManager: BridgeManager, settingsManager: SettingsManager, updateManager: UpdateManager, httpServer: HTTPServer) {
         self.bridgeManager = bridgeManager
         self.settingsManager = settingsManager
         self.updateManager = updateManager
+        self.httpServer = httpServer
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
@@ -97,10 +99,14 @@ class MenuBarController {
 
     @objc func openSettings() {
         if settingsWindow == nil {
+            let server = httpServer
             let settingsView = SettingsView(
                 settingsManager: settingsManager,
                 bridgeManager: bridgeManager,
-                updateManager: updateManager
+                updateManager: updateManager,
+                restartServer: {
+                    Task { await server.restart() }
+                }
             )
 
             let hostingController = NSHostingController(rootView: settingsView)

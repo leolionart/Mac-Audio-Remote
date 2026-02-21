@@ -18,6 +18,7 @@ struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
     @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var updateManager: UpdateManager
+    var restartServer: (() -> Void)? = nil
     @State private var localIP = NetworkService.getLocalIP()
     @State private var startTime = Date()
     @State private var currentTime = Date()
@@ -55,7 +56,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
 
                 // Settings Section
-                SettingsSection(settingsManager: settingsManager, bridgeManager: bridgeManager)
+                SettingsSection(settingsManager: settingsManager, bridgeManager: bridgeManager, restartServer: restartServer)
                     .padding(.horizontal, 24)
 
                 // Update Section (Free Version - Opens GitHub)
@@ -486,6 +487,8 @@ struct URLDisplayRow: View {
 struct SettingsSection: View {
     @ObservedObject var settingsManager: SettingsManager
     @ObservedObject var bridgeManager: BridgeManager
+    var restartServer: (() -> Void)? = nil
+    @State private var isRestarting = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -538,6 +541,57 @@ struct SettingsSection: View {
 
                 // Extension Status
                 ExtensionStatusRow(bridgeManager: bridgeManager)
+
+                // Restart HTTP Server Button
+                if settingsManager.settings.httpServerEnabled {
+                    Divider()
+                        .background(ThemeColors.border)
+                        .padding(.horizontal, 20)
+
+                    HStack(spacing: 12) {
+                        ZStack {
+                            ThemeColors.background
+                                .frame(width: 36, height: 36)
+                                .cornerRadius(8)
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(isRestarting ? ThemeColors.textMuted : ThemeColors.accentOrange)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("HTTP Server")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                            Text(isRestarting ? "Restarting..." : "Stop and restart the HTTP server")
+                                .font(.system(size: 12))
+                                .foregroundColor(ThemeColors.textMuted)
+                        }
+
+                        Spacer()
+
+                        Button(action: {
+                            guard !isRestarting else { return }
+                            isRestarting = true
+                            restartServer?()
+                            // Reset state after 3s to allow button to be pressed again
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                isRestarting = false
+                            }
+                        }) {
+                            Text(isRestarting ? "..." : "Restart")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(isRestarting ? ThemeColors.textMuted : .black)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(isRestarting ? ThemeColors.border : ThemeColors.accentOrange)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isRestarting || restartServer == nil)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
             }
             .padding(.bottom, 20)
         }

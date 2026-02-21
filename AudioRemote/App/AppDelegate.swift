@@ -21,17 +21,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize update manager
         updateManager = UpdateManager()
 
+        // Initialize HTTP server early so MenuBarController can reference it
+        httpServer = HTTPServer(
+            bridgeManager: bridgeManager,
+            settingsManager: settingsManager
+        )
+
         // Setup menu bar
         menuBarController = MenuBarController(
             bridgeManager: bridgeManager,
             settingsManager: settingsManager,
-            updateManager: updateManager
-        )
-
-        // Initialize HTTP server
-        httpServer = HTTPServer(
-            bridgeManager: bridgeManager,
-            settingsManager: settingsManager
+            updateManager: updateManager,
+            httpServer: httpServer
         )
 
         // Setup global hotkey (Option+M)
@@ -94,14 +95,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 await MainActor.run {
                     let alert = NSAlert()
                     alert.messageText = "HTTP Server Error"
-                    alert.informativeText = "Failed to start HTTP server on port \(self.settingsManager.settings.httpPort).\n\nError: \(error.localizedDescription)\n\nPlease check if another application is using this port."
+                    alert.informativeText = "Failed to start HTTP server on port \(self.settingsManager.settings.httpPort).\n\nThis usually happens after an update when the old version is still holding the port.\n\nOpen Settings → click \"Restart\" to retry after a few seconds."
                     alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.runModal()
-
-                    // Disable HTTP server in settings
-                    self.settingsManager.settings.httpServerEnabled = false
-                    self.settingsManager.save()
+                    alert.addButton(withTitle: "Open Settings")
+                    alert.addButton(withTitle: "Dismiss")
+                    let response = alert.runModal()
+                    if response == .alertFirstButtonReturn {
+                        self.menuBarController?.openSettings()
+                    }
+                    // Don't disable the setting - let user retry via Restart button in Settings
                 }
             }
         }
