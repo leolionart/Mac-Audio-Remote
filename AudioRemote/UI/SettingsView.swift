@@ -18,6 +18,7 @@ struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
     @ObservedObject var bridgeManager: BridgeManager
     @ObservedObject var updateManager: UpdateManager
+    @ObservedObject var logManager: LogManager = .shared
     var restartServer: (() -> Void)? = nil
     @State private var localIP = NetworkService.getLocalIP()
     @State private var startTime = Date()
@@ -63,6 +64,10 @@ struct SettingsView: View {
                 UpdateSection(updateManager: updateManager)
                     .padding(.horizontal, 24)
 
+                // Connection Log Section
+                ConnectionLogSection(logManager: logManager)
+                    .padding(.horizontal, 24)
+
                 // Network Info Section
                 NetworkSection(
                     localIP: localIP,
@@ -77,7 +82,7 @@ struct SettingsView: View {
             }
             .padding(.bottom, 24)
         }
-        .frame(width: 700, height: 600)
+        .frame(width: 700, height: 800)
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -966,6 +971,132 @@ struct ConnectionItem: View {
                 .stroke(isActive ? ThemeColors.accent : ThemeColors.border, lineWidth: 1)
         )
         .cornerRadius(20)
+    }
+}
+
+// MARK: - Connection Log Section
+
+struct ConnectionLogSection: View {
+    @ObservedObject var logManager: LogManager
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(ThemeColors.accent)
+                        .frame(width: 8, height: 8)
+                    Text("Connection Log")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                Spacer()
+                Button(action: { logManager.clear() }) {
+                    Text("Clear")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ThemeColors.textMuted)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(ThemeColors.background)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(ThemeColors.border, lineWidth: 1)
+                        )
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            // Log entries
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        if logManager.entries.isEmpty {
+                            Text("No activity yet. Make a request to see logs.")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(ThemeColors.textMuted)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                        } else {
+                            ForEach(logManager.entries) { entry in
+                                LogEntryRow(entry: entry)
+                                    .id(entry.id)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .frame(height: 200)
+                .background(ThemeColors.background)
+                .cornerRadius(10)
+                .padding(.horizontal, 20)
+                .onChange(of: logManager.entries.count) { _ in
+                    if let last = logManager.entries.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+            }
+
+            // Tip
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                    .foregroundColor(ThemeColors.textMuted)
+                Text("/bridge/poll (long-poll) is hidden from log to reduce noise")
+                    .font(.system(size: 11))
+                    .foregroundColor(ThemeColors.textMuted)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+        }
+        .background(ThemeColors.cardBg)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(ThemeColors.border, lineWidth: 1)
+        )
+        .cornerRadius(16)
+    }
+}
+
+struct LogEntryRow: View {
+    let entry: LogEntry
+
+    private var timeString: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        return f.string(from: entry.timestamp)
+    }
+
+    private var color: Color {
+        switch entry.type {
+        case .success:  return ThemeColors.accent
+        case .error:    return ThemeColors.error
+        case .request:  return ThemeColors.accentBlue
+        case .warning:  return ThemeColors.accentOrange
+        case .info:     return ThemeColors.textSecondary
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(timeString)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(ThemeColors.textMuted)
+                .frame(width: 60, alignment: .leading)
+
+            Text(entry.message)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(color)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 3)
     }
 }
 

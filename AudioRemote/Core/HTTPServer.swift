@@ -25,15 +25,19 @@ class HTTPServer {
     @MainActor
     func start(port: Int = 8765) async throws {
         guard !isRunning else { return }
+        LogManager.shared.log("Starting HTTP server on port \(port)…", type: .info)
         print("[HTTPServer] Starting on port \(port)")
 
         if !NetworkService.isPortAvailable(port: port) {
-             print("⚠️ Port \(port) not available, attempting auto-cleanup...")
-             if NetworkService.killAudioRemoteOnPort(port: port) {
-                 print("✅ Cleanup successful")
-             } else {
-                 throw HTTPServerError.portNotAvailable(port)
-             }
+            LogManager.shared.log("⚠️ Port \(port) busy, attempting cleanup…", type: .warning)
+            print("⚠️ Port \(port) not available, attempting auto-cleanup...")
+            if NetworkService.killAudioRemoteOnPort(port: port) {
+                LogManager.shared.log("✅ Port cleanup successful", type: .success)
+                print("✅ Cleanup successful")
+            } else {
+                LogManager.shared.log("✗ Port \(port) still busy — cannot start server", type: .error)
+                throw HTTPServerError.portNotAvailable(port)
+            }
         }
 
         var env = Environment.production
@@ -55,6 +59,7 @@ class HTTPServer {
         }
 
         isRunning = true
+        LogManager.shared.log("✅ Server started on port \(port) — ready", type: .success)
         print("HTTP server started on port \(port)")
     }
 
@@ -68,6 +73,7 @@ class HTTPServer {
         try? await app?.asyncShutdown()
         app = nil
         isRunning = false
+        LogManager.shared.log("Server stopped", type: .info)
         print("HTTP server stopped")
     }
 
@@ -80,6 +86,9 @@ class HTTPServer {
     }
 
     private func configureRoutes(_ app: Application) {
+        // Request/response logging middleware (added first so it wraps everything)
+        app.middleware.use(RequestLogMiddleware())
+
         app.middleware.use(CORSMiddleware(configuration: .init(
             allowedOrigin: .all,
             allowedMethods: [.GET, .POST, .OPTIONS],
@@ -255,4 +264,40 @@ struct RestartResponse: Content {
 
 enum HTTPServerError: Error {
     case portNotAvailable(Int)
+}
+
+// MARK: - Request Logging Middleware
+
+struct RequestLogMiddleware: AsyncMiddleware {
+    // Skip logging for these noisy long-poll endpoints
+    private let skipPaths: Set<String> = ["/bridge/poll"]
+
+    func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
+        let path = request.url.path
+        let shouldLog = !skipPaths.contains(path)
+
+        let clientIP = request.headers.first(name: "X-Forwarded-For")
+            ?? request.remoteAddress?.ipAddress
+            ?? "?"
+
+        let startTime = Date()
+
+        if shouldLog {
+            LogManager.shared.log("→ \(request.method) \(path)  [\(clientIP)]", type: .request)
+        }
+
+        do {
+            let response = try await next.respond(to: request)
+            if shouldLog {
+                let ms = Int(Date().timeIntervalSince(startTime) * 1000)
+                let ok = response.status.code < 400
+                LogManager.shared.log("← \(response.status.code) \(ms)ms", type: ok ? .success : .error)
+            }
+            return response
+        } catch {
+            let ms = Int(Date().timeIntervalSince(startTime) * 1000)
+            LogManager.shared.log("✗ \(path) error: \(error) (\(ms)ms)", type: .error)
+            throw error
+        }
+    }
 }

@@ -112,7 +112,7 @@ class MenuBarController {
             let hostingController = NSHostingController(rootView: settingsView)
             let window = NSWindow(contentViewController: hostingController)
             window.title = "MicDrop Settings"
-            window.setContentSize(NSSize(width: 600, height: 500))
+            window.setContentSize(NSSize(width: 700, height: 800))
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.center()
 
