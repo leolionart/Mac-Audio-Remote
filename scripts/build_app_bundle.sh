@@ -75,7 +75,13 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/$APP_NAME"
 
 # Ad-hoc sign the app bundle to avoid Gatekeeper blocking
 echo "🔏 Ad-hoc signing app bundle..."
-find "$APP_BUNDLE" -exec xattr -c {} + || true
+# Resolve real path (.build/release is a symlink; xattr operations need real paths)
+REAL_APP_BUNDLE=$(readlink -f "$APP_BUNDLE" 2>/dev/null || echo "$APP_BUNDLE")
+# Remove AppleDouble resource fork files (._*) that cause codesign to fail
+find "$REAL_APP_BUNDLE" -name "._*" -delete 2>/dev/null || true
+# Remove com.apple.FinderInfo using -depth (bottom-up) so macOS doesn't re-add it
+# to the bundle root directory when inner files are processed
+find "$REAL_APP_BUNDLE" -depth -exec xattr -d com.apple.FinderInfo {} \; 2>/dev/null || true
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "✅ Build complete!"
