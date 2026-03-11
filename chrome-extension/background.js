@@ -13,10 +13,32 @@ chrome.runtime.onInstalled.addListener(startService);
 // 2. Alarm Listener (Wake up mechanism)
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
-    // console.log('⏰ Keep-alive alarm triggered');
     if (!isPolling) startPolling();
   }
 });
+
+// 3. Detect Meet tab open/close → update badge ngay lập tức
+chrome.tabs.onRemoved.addListener(async () => {
+  await reportMeetStatus();
+});
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (changeInfo.status === 'complete' || changeInfo.url) {
+    await reportMeetStatus();
+  }
+});
+
+async function reportMeetStatus() {
+  try {
+    const tabs = await chrome.tabs.query({ url: '*://meet.google.com/*' });
+    const hasMeet = tabs.length > 0;
+    await fetch(`${BRIDGE_API}/bridge/meet-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hasMeet })
+    });
+  } catch (e) { /* server không chạy, bỏ qua */ }
+}
 
 // Manual start if loaded directly
 startService();
@@ -35,12 +57,16 @@ async function startPolling() {
 
   while (isPolling) {
     try {
+      // Check for Google Meet tabs before polling
+      const meetTabs = await chrome.tabs.query({ url: '*://meet.google.com/*' });
+      const hasMeet = meetTabs.length > 0 ? 1 : 0;
+
       // Use AbortController to prevent hanging connections
       const controller = new AbortController();
       // Server-side timeout is typically 30s-60s. We set client timeout slightly higher.
       const timeoutId = setTimeout(() => controller.abort(), 65000);
 
-      const response = await fetch(POLL_ENDPOINT, { signal: controller.signal });
+      const response = await fetch(`${POLL_ENDPOINT}?hasMeet=${hasMeet}`, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (!response.ok) {

@@ -1,12 +1,10 @@
-console.log('Audio Remote Bridge: Google Meet Content Script Loaded');
+console.log('MicDrop Bridge: Google Meet Content Script Loaded');
 
-// Configuration
-const SELECTORS = {
-  // Mic button usually has data-is-muted attribute
-  micButton: 'button[data-is-muted]',
-  // Fallback: aria-label
-  micButtonAria: 'button[aria-label*="microphone"]'
-};
+// Selectors hoạt động cả pre-join lẫn in-meeting
+// Pre-join:   DIV[role="button"][data-is-muted][aria-label*="microphone"]
+// In-meeting: BUTTON[data-is-muted][aria-label*="microphone"]
+const MIC_SEL  = '[data-is-muted][aria-label*="microphone" i]';
+const CAM_SEL  = '[data-is-muted][aria-label*="camera" i]';
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -16,76 +14,85 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 function handleBridgeEvent(event) {
-  const micButton = findMicButton();
-
-  if (!micButton) {
-    console.warn('Mic button not found');
-    return;
-  }
-
-  const isMuted = micButton.getAttribute('data-is-muted') === 'true';
+  const mic = document.querySelector(MIC_SEL);
+  if (!mic) { console.warn('MicDrop: mic button not found'); return; }
+  const muted = mic.getAttribute('data-is-muted') === 'true';
 
   switch (event) {
-    case 'toggle-mic':
-      micButton.click();
-      break;
-
-    case 'mute-mic':
-      if (!isMuted) micButton.click();
-      break;
-
-    case 'unmute-mic':
-      if (isMuted) micButton.click();
-      break;
+    case 'toggle-mic':  mic.click(); break;
+    case 'mute-mic':    if (!muted) mic.click(); break;
+    case 'unmute-mic':  if (muted)  mic.click(); break;
   }
 }
 
-function findMicButton() {
-  // Try primary selector
-  let btn = document.querySelector(SELECTORS.micButton);
-  if (btn) return btn;
-
-  // Try aria-label fallback (English)
-  const ariaBtns = document.querySelectorAll(SELECTORS.micButtonAria);
-  for (const b of ariaBtns) {
-    // Basic heuristics to ensure it's the main control bar button
-    if (b.offsetHeight > 30) return b;
-  }
-
-  return null;
-}
-
-// Observe state changes and report back
+// Observe state changes → report to native app
 function setupObserver() {
   const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'attributes' &&
-          (mutation.attributeName === 'data-is-muted' || mutation.attributeName === 'aria-label')) {
-
-        const btn = mutation.target;
-        // Check if this is the mic button
-        if (btn.matches(SELECTORS.micButton) || btn.matches(SELECTORS.micButtonAria)) {
-            const isMuted = btn.getAttribute('data-is-muted') === 'true';
-            reportState(isMuted);
-        }
+    for (const m of mutations) {
+      if (m.type !== 'attributes') continue;
+      const el = m.target;
+      if (el.matches(MIC_SEL) || (el.hasAttribute('data-is-muted') && /microphone/i.test(el.getAttribute('aria-label') || ''))) {
+        reportMicState(el.getAttribute('data-is-muted') === 'true');
       }
     }
   });
-
-  // Observe the entire body for now (or a specific container if we can identify it)
   observer.observe(document.body, {
-    attributes: true,
-    subtree: true,
+    attributes: true, subtree: true,
     attributeFilter: ['data-is-muted', 'aria-label']
   });
 }
 
-function reportState(muted) {
-  chrome.runtime.sendMessage({
-    action: 'report-state',
-    muted: muted
-  });
+function reportMicState(muted) {
+  chrome.runtime.sendMessage({ action: 'report-state', muted });
 }
 
-// Initialize observer
+// Auto-mute mic + camera khi vào Meet (pre-join và in-meeting)
+function setupAutoMute() {
+  let applied = false;
+
+  function tryMute() {
+    if (applied) return false;
+    const mic = document.querySelector(MIC_SEL);
+    if (!mic) return false;
+
+    applied = true;
+    console.log('MicDrop: Auto-muting on Meet load');
+
+    // Mute mic nếu đang bật
+    if (mic.getAttribute('data-is-muted') !== 'true') {
+      mic.click();
+      console.log('MicDrop: Mic muted');
+    }
+
+    // Tắt camera sau 300ms
+    setTimeout(() => {
+      const cam = document.querySelector(CAM_SEL);
+      if (cam && cam.getAttribute('data-is-muted') !== 'true') {
+        cam.click();
+        console.log('MicDrop: Camera turned off');
+      }
+      // Report trạng thái mic sau khi settle
+      setTimeout(() => {
+        const m = document.querySelector(MIC_SEL);
+        if (m) reportMicState(m.getAttribute('data-is-muted') === 'true');
+      }, 300);
+    }, 300);
+
+    return true;
+  }
+
+  // Thử ngay (nếu DOM đã có sẵn)
+  if (!tryMute()) {
+    // Watch DOM cho buttons xuất hiện
+    const observer = new MutationObserver(() => {
+      if (tryMute()) observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Fallback timers phòng case DOM load chậm
+    [500, 1500, 3000].forEach(ms => setTimeout(tryMute, ms));
+  }
+}
+
 setupObserver();
+setupAutoMute();

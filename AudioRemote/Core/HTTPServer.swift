@@ -104,15 +104,23 @@ class HTTPServer {
             // Record whether extension was connected before toggling
             let extensionWasConnected = self.bridgeManager.isExtensionConnected
 
+            // Compute expected state BEFORE toggle — isMuted is updated async on main thread
+            // so reading it after toggleWithConfirmation() returns the OLD (inverted) value
+            let expectedMuted = !self.bridgeManager.isMuted
+
             // Wait for extension confirmation (3 second timeout)
             let toggleResult = await self.bridgeManager.toggleWithConfirmation(timeout: 3.0)
-            let muted = self.bridgeManager.isMuted
+            let muted = expectedMuted
 
             // confirmed = true only if extension was connected AND it responded
             let confirmed = extensionWasConnected && toggleResult
             let source = confirmed ? "extension" : "local"
 
-            if !confirmed {
+            if confirmed {
+                LogManager.shared.log("✅ \(muted ? "Muted" : "Unmuted") via Google Meet", type: .success)
+            } else {
+                let reason = extensionWasConnected ? "Extension timeout" : "No Meet tab"
+                LogManager.shared.log("⚠️ \(muted ? "Muted" : "Unmuted") locally — \(reason)", type: .warning)
                 print("⚠️ Toggle applied locally — extension \(extensionWasConnected ? "timeout" : "not connected")")
             }
 
@@ -167,15 +175,28 @@ class HTTPServer {
             let body = try req.content.decode(StateRequest.self)
 
             self.bridgeManager.updateMicState(muted: body.muted)
+            LogManager.shared.log("🎙 Meet mic: \(body.muted ? "Muted 🔇" : "Unmuted 🎤")", type: .info)
             return ToggleResponse(status: "updated", muted: body.muted, confirmed: true, source: "extension")
+        }
+
+        // Extension báo trạng thái Meet tab thay đổi (mở/đóng tab)
+        app.post("bridge", "meet-status") { [weak self] req throws -> Response in
+            guard let self = self else { throw Abort(.internalServerError) }
+            struct MeetStatusRequest: Content { let hasMeet: Bool }
+            let body = try req.content.decode(MeetStatusRequest.self)
+            DispatchQueue.main.async { self.bridgeManager.hasMeetTab = body.hasMeet }
+            return Response(status: .ok)
         }
 
         // Long-polling endpoint for extension
         app.get("bridge", "poll") { [weak self] req async throws -> BridgeEventResponse in
             guard let self = self else { throw Abort(.internalServerError) }
 
+            // Extension báo có Meet tab đang mở không (query param: ?hasMeet=1)
+            let hasMeet = req.query["hasMeet"] == Optional("1")
+
             // Wait for next event (suspends request until event occurs)
-            let event = await self.bridgeManager.waitForNextEvent()
+            let event = await self.bridgeManager.waitForNextEvent(hasMeet: hasMeet)
             return BridgeEventResponse(event: event.rawValue)
         }
 
@@ -197,13 +218,72 @@ class HTTPServer {
 
         // Volume endpoints (simplified)
         app.post("volume", "increase") { [weak self] req throws -> VolumeResponse in
-            self?.bridgeManager.increaseOutputVolume()
-            return VolumeResponse(status: "ok", volume: self?.bridgeManager.outputVolume ?? 0, muted: false)
+            guard let self = self else { throw Abort(.internalServerError) }
+            self.bridgeManager.increaseOutputVolume()
+            let vol = self.bridgeManager.outputVolume
+            let muted = self.bridgeManager.isOutputMuted
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(volume: vol, isMuted: muted, icon: "speaker.wave.3.fill")
+            }
+            return VolumeResponse(status: "ok", volume: vol, muted: muted)
         }
 
         app.post("volume", "decrease") { [weak self] req throws -> VolumeResponse in
-            self?.bridgeManager.decreaseOutputVolume()
-            return VolumeResponse(status: "ok", volume: self?.bridgeManager.outputVolume ?? 0, muted: false)
+            guard let self = self else { throw Abort(.internalServerError) }
+            self.bridgeManager.decreaseOutputVolume()
+            let vol = self.bridgeManager.outputVolume
+            let muted = self.bridgeManager.isOutputMuted
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(volume: vol, isMuted: muted, icon: "speaker.wave.1.fill")
+            }
+            return VolumeResponse(status: "ok", volume: vol, muted: muted)
+        }
+
+        // POST /volume/set - Set volume via JSON body {"volume": 0.5}
+        app.post("volume", "set") { [weak self] req throws -> VolumeResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+            struct VolumeSetRequest: Content { let volume: Float }
+            let body = try req.content.decode(VolumeSetRequest.self)
+            self.bridgeManager.setOutputVolume(body.volume)
+            let vol = self.bridgeManager.outputVolume
+            let muted = self.bridgeManager.isOutputMuted
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(volume: vol, isMuted: muted)
+            }
+            return VolumeResponse(status: "ok", volume: vol, muted: muted)
+        }
+
+        // POST /volume/percent/:value - Set volume by path (0.0-1.0, hỗ trợ cả dấu phẩy locale)
+        app.post("volume", "percent", ":value") { [weak self] req throws -> VolumeResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+            let raw = req.parameters.get("value") ?? "0"
+            // Xử lý locale: "0,375" → "0.375"
+            let normalized = raw.replacingOccurrences(of: ",", with: ".")
+            let volume = Float(normalized) ?? 0.0
+            self.bridgeManager.setOutputVolume(volume)
+            let vol = self.bridgeManager.outputVolume
+            let muted = self.bridgeManager.isOutputMuted
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(volume: vol, isMuted: muted)
+            }
+            return VolumeResponse(status: "ok", volume: vol, muted: muted)
+        }
+
+        // POST /volume/toggle-mute
+        app.post("volume", "toggle-mute") { [weak self] req throws -> VolumeResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+            let muted = self.bridgeManager.toggleOutputMute()
+            let vol = self.bridgeManager.outputVolume
+            DispatchQueue.main.async {
+                VolumeHUDController.shared.show(volume: vol, isMuted: muted, icon: muted ? "speaker.slash.fill" : "speaker.wave.3.fill")
+            }
+            return VolumeResponse(status: "ok", volume: vol, muted: muted)
+        }
+
+        // GET /volume/status
+        app.get("volume", "status") { [weak self] req throws -> VolumeResponse in
+            guard let self = self else { throw Abort(.internalServerError) }
+            return VolumeResponse(status: "ok", volume: self.bridgeManager.outputVolume, muted: self.bridgeManager.isOutputMuted)
         }
 
         // Web UI

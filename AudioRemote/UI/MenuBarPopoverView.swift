@@ -10,11 +10,11 @@ struct MenuBarPopoverView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with status and controls
+            // Header with status indicators and settings button
             HeaderSection(
-                isMuted: bridgeManager.isMuted,
                 serverRunning: settingsManager.settings.httpServerEnabled,
                 extensionConnected: bridgeManager.isExtensionConnected,
+                hasMeetTab: bridgeManager.hasMeetTab,
                 openSettings: openSettings
             )
 
@@ -68,44 +68,27 @@ struct MenuBarPopoverView: View {
 
 // MARK: - Header Section
 struct HeaderSection: View {
-    let isMuted: Bool
     let serverRunning: Bool
     let extensionConnected: Bool
+    let hasMeetTab: Bool
     let openSettings: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Status indicator
-            HStack(spacing: 6) {
-                Text(isMuted ? "🔇" : "🎤")
-                    .font(.system(size: 16))
-                Text(isMuted ? "Muted" : "Active")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(0.15))
-            )
-
-            Spacer()
-
-            // Extension connection status
+        HStack(spacing: 8) {
+            // Meet tab status
             HStack(spacing: 4) {
                 Circle()
-                    .fill(extensionConnected ? Color.green : Color.orange)
+                    .fill(hasMeetTab ? Color.green : Color.orange)
                     .frame(width: 6, height: 6)
-                Text(extensionConnected ? "Meet" : "No App")
+                Text(hasMeetTab ? "Meet" : "No Meet")
                     .font(.system(size: 11))
-                    .foregroundColor(extensionConnected ? .secondary : .orange)
+                    .foregroundColor(hasMeetTab ? .secondary : .orange)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(extensionConnected ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
+                    .fill(hasMeetTab ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
             )
 
             // Server status
@@ -123,6 +106,8 @@ struct HeaderSection: View {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.gray.opacity(0.1))
             )
+
+            Spacer()
 
             // Settings button
             Button(action: openSettings) {

@@ -623,27 +623,40 @@ struct ExtensionStatusRow: View {
 
                     Image(systemName: "puzzlepiece.extension.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(ThemeColors.accentBlue)
+                        .foregroundColor(bridgeManager.isExtensionConnected ? ThemeColors.accentBlue : ThemeColors.textMuted)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Chrome Extension Bridge")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
-                    Text("Control Google Meet when Chrome is not focused")
+                    Text(bridgeManager.isExtensionConnected
+                         ? "Connected — ready to control Google Meet"
+                         : "Not connected — open Chrome with a Meet tab")
                         .font(.system(size: 12))
                         .foregroundColor(ThemeColors.textMuted)
                 }
 
                 Spacer()
 
-                Text("ACTIVE")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(ThemeColors.accent)
-                    .cornerRadius(4)
+                // Badge động theo trạng thái kết nối thực sự
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(bridgeManager.isExtensionConnected ? ThemeColors.accent : ThemeColors.error)
+                        .frame(width: 6, height: 6)
+                    Text(bridgeManager.isExtensionConnected ? "CONNECTED" : "OFFLINE")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(bridgeManager.isExtensionConnected ? ThemeColors.accent : ThemeColors.error)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background((bridgeManager.isExtensionConnected ? ThemeColors.accent : ThemeColors.error).opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(bridgeManager.isExtensionConnected ? ThemeColors.accent : ThemeColors.error, lineWidth: 1)
+                )
+                .cornerRadius(20)
+                .animation(.easeInOut(duration: 0.3), value: bridgeManager.isExtensionConnected)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -1034,6 +1047,12 @@ struct ConnectionLogSection: View {
                 .background(ThemeColors.background)
                 .cornerRadius(10)
                 .padding(.horizontal, 20)
+                .onAppear {
+                    // Scroll to bottom khi mở settings
+                    if let last = logManager.entries.last {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
                 .onChange(of: logManager.entries.count) { _ in
                     if let last = logManager.entries.last {
                         withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }

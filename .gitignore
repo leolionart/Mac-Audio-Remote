@@ -49,3 +49,4 @@ bin/
 AudioRemote/RustFFI/target/
 AudioRemote/RustFFI/Cargo.lock
 AudioRemote/RustFFI/*.a
+.playwright-mcp/

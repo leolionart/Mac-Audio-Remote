@@ -46,11 +46,15 @@ class BridgeManager: ObservableObject {
     // MARK: - Extension Connection Status
     /// True when Chrome Extension is actively long-polling /bridge/poll
     @Published var isExtensionConnected: Bool = false
+    /// True when extension reports having at least one Google Meet tab open
+    @Published var hasMeetTab: Bool = false
     private var disconnectWorkItem: DispatchWorkItem?
 
     // MARK: - Event Handling
     private var eventContinuations: [CheckedContinuation<BridgeEvent, Never>] = []
     private let eventQueue = DispatchQueue(label: "com.audioremote.bridge.events")
+    /// Pending event: lưu event khi không có active listeners (extension đang reconnect)
+    private var pendingEvent: BridgeEvent?
 
     // MARK: - Confirmation Handling
     private var confirmationContinuations: [UUID: CheckedContinuation<Bool, Never>] = [:]
@@ -74,11 +78,9 @@ class BridgeManager: ObservableObject {
         let newState = !isMuted
         updateMicState(muted: newState)
 
-        // Broadcast specific event for granular control
+        // Broadcast specific event: muteMic/unmuteMic (idempotent - extension checks state before clicking)
+        // Không broadcast toggleMic vì sẽ gây double-event với pendingEvent queue
         broadcast(event: newState ? .muteMic : .unmuteMic)
-
-        // Broadcast generic toggle
-        broadcast(event: .toggleMic)
 
         return newState
     }
@@ -87,12 +89,14 @@ class BridgeManager: ObservableObject {
     /// - Parameter timeout: Timeout in seconds (default 3)
     /// - Returns: True if successfully muted, false on timeout
     func toggleWithConfirmation(timeout: TimeInterval = 3.0) async -> Bool {
-        // Fast path: if no extension is currently polling, do immediate toggle
-        // This prevents iOS Shortcuts from getting a 3-second wait + "timeout" response
+        // Fast path: chỉ bỏ qua confirmation khi extension THỰC SỰ offline
+        // Nếu extension connected nhưng đang reconnect (giữa hai poll cycles),
+        // vẫn dùng confirmation flow + pending event queue để đảm bảo event được deliver
         var hasActiveListeners = false
         eventQueue.sync { hasActiveListeners = !eventContinuations.isEmpty }
 
-        if !hasActiveListeners {
+        if !hasActiveListeners && !isExtensionConnected {
+            // Extension offline hoàn toàn - toggle local state ngay
             _ = toggle()
             return true
         }
@@ -106,9 +110,8 @@ class BridgeManager: ObservableObject {
                 confirmationContinuations[requestId] = continuation
             }
 
-            // Broadcast event
+            // Broadcast event (chỉ 1 event - muteMic/unmuteMic idempotent)
             broadcast(event: expectedState ? .muteMic : .unmuteMic)
-            broadcast(event: .toggleMic)
 
             // Set timeout
             Task {
@@ -133,6 +136,8 @@ class BridgeManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.isMuted = muted
             self?.currentVolume = muted ? 0.0 : 1.0
+            // Extension báo state → chắc chắn có tab Meet đang mở
+            self?.hasMeetTab = true
             print("Bridge state updated: \(muted ? "Muted" : "Unmuted")")
         }
 
@@ -151,22 +156,24 @@ class BridgeManager: ObservableObject {
     }
 
     func setOutputVolume(_ volume: Float32) {
+        let clamped = max(0.0, min(1.0, volume))
         DispatchQueue.main.async { [weak self] in
-            self?.outputVolume = volume
+            self?.outputVolume = clamped
         }
-        // Could forward to system volume if desired, but for now focusing on Meet
+        // Điều khiển system volume thực qua osascript
+        let percent = Int(clamped * 100)
+        let task = Process()
+        task.launchPath = "/usr/bin/osascript"
+        task.arguments = ["-e", "set volume output volume \(percent)"]
+        try? task.run()
     }
 
     func increaseOutputVolume(_ amount: Float32 = 0.1) {
-        broadcast(event: .volumeUp)
-        // Mock UI update
         let newVol = min(1.0, outputVolume + amount)
         setOutputVolume(newVol)
     }
 
     func decreaseOutputVolume(_ amount: Float32 = 0.1) {
-        broadcast(event: .volumeDown)
-        // Mock UI update
         let newVol = max(0.0, outputVolume - amount)
         setOutputVolume(newVol)
     }
@@ -177,21 +184,33 @@ class BridgeManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.isOutputMuted = newState
         }
-        broadcast(event: .toggleSpeaker)
+        let script = newState ? "set volume with output muted" : "set volume without output muted"
+        let task = Process()
+        task.launchPath = "/usr/bin/osascript"
+        task.arguments = ["-e", script]
+        try? task.run()
         return newState
     }
 
     // MARK: - Bridge Communication
 
     /// Broadcast event to all waiting long-pollers
+    /// Nếu không có listeners (extension đang reconnect), lưu vào pendingEvent
     func broadcast(event: BridgeEvent) {
         print("📢 Bridge Event: \(event.rawValue)")
         eventQueue.sync {
-            // Resume all waiting continuations
-            for continuation in eventContinuations {
-                continuation.resume(returning: event)
+            if !eventContinuations.isEmpty {
+                // Có listeners đang chờ - deliver ngay
+                for continuation in eventContinuations {
+                    continuation.resume(returning: event)
+                }
+                eventContinuations.removeAll()
+                pendingEvent = nil  // clear pending vì đã deliver fresh event
+            } else {
+                // Không có listeners - extension đang reconnect, lưu để deliver sau
+                print("📬 No listeners, storing pending event: \(event.rawValue)")
+                pendingEvent = event
             }
-            eventContinuations.removeAll()
         }
         // After broadcast, extension will reconnect shortly.
         // If no reconnect within 5s, mark as disconnected.
@@ -199,12 +218,30 @@ class BridgeManager: ObservableObject {
     }
 
     /// Wait for next event (Async Long-polling)
-    func waitForNextEvent() async -> BridgeEvent {
+    /// - Parameter hasMeet: Extension báo có tab Meet đang mở không
+    func waitForNextEvent(hasMeet: Bool = false) async -> BridgeEvent {
         // Extension is connecting — cancel any pending disconnect timer
         disconnectWorkItem?.cancel()
         disconnectWorkItem = nil
         DispatchQueue.main.async { [weak self] in
             self?.isExtensionConnected = true
+            self?.hasMeetTab = hasMeet
+        }
+
+        // Kiểm tra pending event trước (non-blocking)
+        // Trường hợp này xảy ra khi: remote request đến khi extension đang reconnect,
+        // event được lưu vào pendingEvent, extension reconnect và nhận ngay
+        var pending: BridgeEvent? = nil
+        eventQueue.sync {
+            pending = pendingEvent
+            pendingEvent = nil
+        }
+
+        if let event = pending {
+            print("📬 Delivering pending event to reconnected extension: \(event.rawValue)")
+            // Reset disconnect timer vì extension vừa reconnect
+            scheduleExtensionDisconnect(after: 5.0)
+            return event
         }
 
         return await withCheckedContinuation { continuation in
@@ -219,6 +256,7 @@ class BridgeManager: ObservableObject {
         let item = DispatchWorkItem { [weak self] in
             DispatchQueue.main.async {
                 self?.isExtensionConnected = false
+                self?.hasMeetTab = false
             }
         }
         disconnectWorkItem = item
@@ -233,6 +271,9 @@ class BridgeManager: ObservableObject {
         // Drain long-poll connections by broadcasting server-restart event
         broadcast(event: .serverRestart)
 
+        // Clear any pending event (server is restarting, stale events invalid)
+        eventQueue.sync { pendingEvent = nil }
+
         // Cancel any pending confirmation waits
         confirmationQueue.sync {
             for (_, continuation) in confirmationContinuations {
@@ -245,6 +286,7 @@ class BridgeManager: ObservableObject {
         disconnectWorkItem?.cancel()
         DispatchQueue.main.async { [weak self] in
             self?.isExtensionConnected = false
+            self?.hasMeetTab = false
         }
 
         print("🔄 BridgeManager: all pending continuations cancelled")
