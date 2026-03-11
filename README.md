@@ -6,6 +6,8 @@
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-orange.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)
 
+![MicDrop Screenshot](docs/screenshots/screenshot-1.png)
+
 ## Cách hoạt động
 
 ```
