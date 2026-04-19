@@ -1,12 +1,9 @@
 {
   "manifest_version": 3,
   "name": "MicDrop for Google Meet",
-  "version": "1.0",
+  "version": "1.0.3",
   "description": "Remote microphone control for Google Meet via MicDrop Mac App",
   "permissions": [
-    "activeTab",
-    "scripting",
-    "storage",
     "alarms",
     "tabs"
   ],
@@ -30,6 +27,16 @@
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
+    }
+  },
+  "commands": {
+    "toggle-mic": {
+      "suggested_key": {
+        "default": "Alt+Shift+M",
+        "mac": "Alt+Shift+M"
+      },
+      "description": "Toggle Google Meet Microphone",
+      "global": true
     }
   },
   "icons": {

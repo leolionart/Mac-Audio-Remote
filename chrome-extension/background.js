@@ -17,7 +17,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// 3. Detect Meet tab open/close → update badge ngay lập tức
+// 3. Command Listener (Standalone shortcuts)
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'toggle-mic') {
+    console.log('⌨️ Command triggered:', command);
+    handleEvent('toggle-mic');
+  }
+});
+
+// 4. Detect Meet tab open/close → update badge ngay lập tức
 chrome.tabs.onRemoved.addListener(async () => {
   await reportMeetStatus();
 });

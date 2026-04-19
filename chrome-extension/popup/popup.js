@@ -4,28 +4,50 @@ document.addEventListener('DOMContentLoaded', checkStatus);
 document.getElementById('retry-btn').addEventListener('click', checkStatus);
 
 async function checkStatus() {
-  const connStatus = document.getElementById('connection-status');
-  const micStatus = document.getElementById('mic-status');
+  const connWrapper = document.getElementById('connection-status-wrapper');
+  const connIndicator = document.getElementById('connection-indicator');
+  const connText = document.getElementById('connection-text');
+  
+  const micWrapper = document.getElementById('mic-status-wrapper');
+  const micIndicator = document.getElementById('mic-indicator');
+  const micText = document.getElementById('mic-text');
 
-  connStatus.textContent = 'Checking...';
-  connStatus.className = 'status-value';
+  // Reset to checking state
+  connText.textContent = 'Checking...';
+  connWrapper.className = 'value status-checking';
+  connIndicator.className = 'indicator bg-accent';
 
   try {
     const response = await fetch(`${BRIDGE_API}/status`);
     if (response.ok) {
       const data = await response.json();
 
-      connStatus.textContent = 'Connected';
-      connStatus.className = 'status-value connected';
+      // App Connection
+      connText.textContent = 'Connected';
+      connWrapper.className = 'value status-connected';
+      connIndicator.className = 'indicator bg-success';
 
-      micStatus.textContent = data.muted ? 'Muted' : 'Active';
-      micStatus.className = `status-value ${data.muted ? 'muted' : 'active'}`;
+      // Mic Status
+      if (data.muted) {
+        micText.textContent = 'Muted';
+        micWrapper.className = 'value status-muted';
+        micIndicator.className = 'indicator bg-danger';
+      } else {
+        micText.textContent = 'Active';
+        micWrapper.className = 'value status-active';
+        micIndicator.className = 'indicator bg-success';
+      }
     } else {
       throw new Error('Server error');
     }
   } catch (error) {
-    connStatus.textContent = 'Disconnected';
-    connStatus.className = 'status-value disconnected';
-    micStatus.textContent = '-';
+    // Disconnected state
+    connText.textContent = 'Disconnected';
+    connWrapper.className = 'value status-disconnected';
+    connIndicator.className = 'indicator bg-danger';
+    
+    micText.textContent = 'Unavailable';
+    micWrapper.className = 'value';
+    micIndicator.className = 'indicator bg-dim';
   }
 }

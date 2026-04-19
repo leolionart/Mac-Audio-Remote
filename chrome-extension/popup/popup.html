@@ -1,67 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
     body {
-      width: 250px;
-      padding: 15px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #1a1a2e;
-      color: white;
+      width: 280px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
     }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+    }
+
     h2 {
-      margin: 0 0 10px 0;
-      font-size: 16px;
-      color: #10b981;
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
     }
-    .status-box {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 10px;
+
+    .status-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
     }
-    .status-row {
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
-      margin-bottom: 5px;
+      align-items: center;
+    }
+
+    .label {
       font-size: 13px;
+      color: var(--text-dim);
+      font-weight: 500;
     }
-    .status-value {
-      font-weight: bold;
+
+    .value {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .connected { color: #10b981; }
-    .disconnected { color: #ef4444; }
-    .muted { color: #ef4444; }
-    .active { color: #10b981; }
+
+    .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Status Colors */
+    .status-connected { color: var(--success); }
+    .status-disconnected { color: var(--danger); }
+    .status-muted { color: var(--danger); }
+    .status-active { color: var(--success); }
+    .status-checking { color: var(--accent); }
+
+    .bg-success { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+    .bg-danger { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .bg-accent { background-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .bg-dim { background-color: var(--text-dim); }
 
     button {
       width: 100%;
-      padding: 8px;
-      background: #2563eb;
-      color: white;
+      padding: 10px;
+      background: var(--accent);
+      color: #0f172a;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
-    button:hover { background: #1d4ed8; }
+
+    button:hover {
+      background: #7dd3fc;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .footer {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
   </style>
 </head>
 <body>
-  <h2>MicDrop Bridge</h2>
+  <div class="header">
+    <span class="logo">🎤</span>
+    <h2>MicDrop Bridge</h2>
+  </div>
 
-  <div class="status-box">
-    <div class="status-row">
-      <span>MicDrop App:</span>
-      <span id="connection-status" class="status-value disconnected">Checking...</span>
+  <div class="status-container">
+    <div class="card">
+      <span class="label">MicDrop App</span>
+      <div id="connection-status-wrapper" class="value status-checking">
+        <span id="connection-indicator" class="indicator bg-accent"></span>
+        <span id="connection-text">Checking...</span>
+      </div>
     </div>
-    <div class="status-row">
-      <span>Mic Status:</span>
-      <span id="mic-status" class="status-value">Unknown</span>
+
+    <div class="card">
+      <span class="label">Microphone</span>
+      <div id="mic-status-wrapper" class="value">
+        <span id="mic-indicator" class="indicator bg-dim"></span>
+        <span id="mic-text">Unknown</span>
+      </div>
     </div>
   </div>
 
-  <button id="retry-btn">Retry Connection</button>
+  <button id="retry-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+    Thử kết nối lại
+  </button>
+
+  <div class="footer">
+    v1.0.3 • Google Meet Remote Control
+  </div>
 
   <script src="popup.js"></script>
 </body>
