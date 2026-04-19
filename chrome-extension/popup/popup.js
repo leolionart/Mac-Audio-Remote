@@ -2,6 +2,9 @@ const BRIDGE_API = 'http://localhost:8765';
 
 document.addEventListener('DOMContentLoaded', checkStatus);
 document.getElementById('retry-btn').addEventListener('click', checkStatus);
+document.getElementById('shortcuts-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+});
 
 async function checkStatus() {
   const connWrapper = document.getElementById('connection-status-wrapper');
